@@ -143,12 +143,66 @@ def get_ai_newsletters(service, days=7):
 
 def extract_key_topics(newsletters, num_topics=5):
     """Extract key topics from newsletters using more advanced NLP techniques."""
-    # Combine all newsletter content
-    all_text = " ".join([nl['body'] for nl in newsletters])
+    # Parse dates from newsletters to determine recency
+    newsletter_dates = []
+    from email.utils import parsedate_to_datetime
     
-    # Extract and process subject lines with additional weighting
-    subjects_text = " ".join([nl['subject'] for nl in newsletters])
-    # Repeat subject lines multiple times to give them more weight
+    # Create a mapping of newsletters to their parsed dates
+    newsletter_with_dates = []
+    for i, nl in enumerate(newsletters):
+        try:
+            date_obj = parsedate_to_datetime(nl['date'])
+            # Store the index with the newsletter and date
+            newsletter_with_dates.append((i, nl, date_obj))
+        except Exception as e:
+            # If we can't parse the date, use the current time as a fallback
+            print(f"Warning: Could not parse date '{nl['date']}': {str(e)}")
+            newsletter_with_dates.append((i, nl, datetime.datetime.now()))
+    
+    # Sort newsletters by date, newest first
+    newsletter_with_dates.sort(key=lambda x: x[2], reverse=True)
+    
+    # Calculate recency weight - newer newsletters get higher weight
+    max_weight = 10  # Maximum recency weight for the newest newsletter
+    min_weight = 1   # Minimum recency weight for the oldest newsletter
+    
+    if len(newsletter_with_dates) > 1:
+        newest_date = newsletter_with_dates[0][2]
+        oldest_date = newsletter_with_dates[-1][2]
+        date_range = (newest_date - oldest_date).total_seconds()
+        
+        # If all newsletters are from the same time, avoid division by zero
+        if date_range == 0:
+            # Use index as the key instead of the newsletter object
+            recency_weights = {i: max_weight for i, _, _ in newsletter_with_dates}
+        else:
+            # Calculate weight based on recency
+            recency_weights = {}
+            for i, _, date_obj in newsletter_with_dates:
+                # Calculate where this newsletter falls in the date range (0.0 to 1.0)
+                recency_factor = (date_obj - oldest_date).total_seconds() / date_range
+                # Calculate weight (min_weight to max_weight)
+                weight = min_weight + recency_factor * (max_weight - min_weight)
+                # Use index as the key instead of the newsletter object
+                recency_weights[i] = weight
+    else:
+        # If there's only one newsletter, give it maximum weight
+        recency_weights = {i: max_weight for i, _, _ in newsletter_with_dates}
+    
+    # Combine all newsletter content with recency weighting
+    all_text = ""
+    subjects_text = ""
+    
+    for i, nl in enumerate(newsletters):
+        weight = recency_weights[i]
+        
+        # Apply recency weight by repeating content proportionally to its recency
+        # More recent newsletters get repeated more times
+        content_weight = max(1, int(weight))
+        all_text += " ".join([nl['body']] * content_weight) + " "
+        subjects_text += " ".join([nl['subject']] * content_weight) + " "
+    
+    # Repeat subject lines multiple times to give them more weight (in addition to recency)
     weighted_subjects = " ".join([subjects_text] * 5)  # Give subject lines 5x weight
     
     # Combine body text with weighted subject lines
@@ -175,25 +229,42 @@ def extract_key_topics(newsletters, num_topics=5):
     
     # Process subject lines separately for additional topic extraction
     subject_phrases = []
-    for nl in newsletters:
-        # Clean and tokenize subject
+    
+    # Also look for breaking news indicators in subjects
+    breaking_news_indicators = ['breaking', 'just in', 'just announced', 'new release', 
+                                'launches', 'launched', 'announces', 'announced', 
+                                'releases', 'released', 'introduces', 'introduced',
+                                'unveils', 'unveiled', 'debuts', 'just now']
+    
+    # Extra weight for subjects containing breaking news indicators
+    for i, nl in enumerate(newsletters):
+        weight = recency_weights[i]
         subject = nl['subject'].lower()
-        # Remove common newsletter prefixes like "[Newsletter]" or "Weekly:"
+        
+        # Check if subject contains breaking news indicators
+        has_breaking_indicator = any(indicator in subject for indicator in breaking_news_indicators)
+        
+        # Add extra weight for breaking news
+        breaking_multiplier = 3 if has_breaking_indicator else 1
+        
+        # Remove common newsletter prefixes
         subject = re.sub(r'^\[.*?\]', '', subject).strip()
         subject = re.sub(r'^.*?:', '', subject).strip()
         
         # Extract potential topic phrases (2-4 word phrases)
         subject_words = [w for w in word_tokenize(subject) if w.isalpha() and w not in stop_words and len(w) > 3]
         if len(subject_words) >= 2:
-            # Extract multi-word phrases from subjects
+            # Extract multi-word phrases from subjects with recency and breaking news weighting
+            phrase_weight = int(weight * breaking_multiplier)
             for i in range(len(subject_words)-1):
                 if i+1 < len(subject_words):
-                    subject_phrases.append(' '.join(subject_words[i:i+2]))
+                    subject_phrases.extend([' '.join(subject_words[i:i+2])] * phrase_weight)
                 if i+2 < len(subject_words):
-                    subject_phrases.append(' '.join(subject_words[i:i+3]))
+                    subject_phrases.extend([' '.join(subject_words[i:i+3])] * phrase_weight)
                 if i+3 < len(subject_words):
-                    subject_phrases.append(' '.join(subject_words[i:i+4]))
+                    subject_phrases.extend([' '.join(subject_words[i:i+4])] * phrase_weight)
     
+    # Continue with the rest of the function as before
     # Tokenize and filter main text
     words = word_tokenize(combined_text.lower())
     filtered_words = [word for word in words if word.isalpha() and word not in stop_words and len(word) > 3]
@@ -300,6 +371,53 @@ def analyze_with_llm(newsletters, topics):
         
         topic_snippets[base_topic] = snippets[:10]  # Limit to 10 snippets per topic
     
+    # Sort newsletters by date, newest first
+    from email.utils import parsedate_to_datetime
+    newsletter_with_dates = []
+    for i, nl in enumerate(newsletters):
+        try:
+            date_obj = parsedate_to_datetime(nl['date'])
+            newsletter_with_dates.append((i, nl, date_obj))
+        except Exception as e:
+            # If we can't parse the date, use the current time as a fallback
+            newsletter_with_dates.append((i, nl, datetime.datetime.now()))
+    
+    # Sort newsletters by date, newest first
+    newsletter_with_dates.sort(key=lambda x: x[2], reverse=True)
+    sorted_newsletters = [nl for _, nl, _ in newsletter_with_dates]
+    
+    # Specifically look for breaking news in the 3 most recent newsletters
+    recent_nl_count = min(3, len(sorted_newsletters))
+    recent_newsletters = sorted_newsletters[:recent_nl_count]
+    
+    # Extract potential breaking news from recent newsletters
+    breaking_news_indicators = ['breaking', 'just in', 'just announced', 'new release', 
+                               'launches', 'launched', 'announces', 'announced', 
+                               'releases', 'released', 'introduces', 'introduced',
+                               'unveils', 'unveiled', 'debuts', 'just now']
+    
+    recent_developments = []
+    for nl in recent_newsletters:
+        subject = nl['subject'].lower()
+        body_first_para = ' '.join(sent_tokenize(nl['body'])[:5])  # First few sentences
+        
+        # Check if subject contains breaking news indicators
+        if any(indicator in subject.lower() for indicator in breaking_news_indicators):
+            recent_developments.append({
+                'subject': nl['subject'],
+                'content': body_first_para,
+                'date': nl['date'],
+                'is_breaking': True
+            })
+        # Also check the first paragraph for breaking news indicators
+        elif any(indicator in body_first_para.lower() for indicator in breaking_news_indicators):
+            recent_developments.append({
+                'subject': nl['subject'],
+                'content': body_first_para,
+                'date': nl['date'],
+                'is_breaking': True
+            })
+    
     # Prepare prompt for LLM
     prompt = """Based on the following AI newsletter content, identify and analyze the 5 most important developments or trends. Focus on DIVERSITY - ensure you cover distinct topics rather than different aspects of the same topic:
 
@@ -308,6 +426,14 @@ def analyze_with_llm(newsletters, topics):
     for topic, snippets in topic_snippets.items():
         prompt += f"TOPIC: {topic}\n"
         prompt += f"SNIPPETS: {' '.join(snippets[:5])}\n\n"
+    
+    # Add a specific section for recent developments
+    if recent_developments:
+        prompt += "RECENT BREAKING DEVELOPMENTS (These may be significant even if mentioned in fewer newsletters):\n\n"
+        for dev in recent_developments:
+            prompt += f"SUBJECT: {dev['subject']}\n"
+            prompt += f"DATE: {dev['date']}\n"
+            prompt += f"CONTENT: {dev['content'][:500]}...\n\n"
     
     prompt += """
 Please format your response as follows for each of the top 5 developments, ensuring DIVERSITY across topics:
@@ -327,6 +453,7 @@ IMPORTANT GUIDELINES:
 7. "Practical Impact" must be truly actionable - what can regular people DO with this information?
 8. Keep each section concise but informative
 9. Sort by importance (most important first)
+10. IMPORTANT: Pay close attention to the RECENT BREAKING DEVELOPMENTS section - these items may be significant even if they're not mentioned in many newsletters, because they're very new. Include at least one of these if it's substantive and important.
 
 Look broadly across different domains like: AI applications, new models, business developments, security, ethics, regulation, research breakthroughs, etc.
 """
@@ -335,7 +462,7 @@ Look broadly across different domains like: AI applications, new models, busines
     response = anthropic_client.messages.create(
         model="claude-3-opus-20240229",
         max_tokens=2000,
-        system="You are an AI consultant helping summarize AI newsletter content for regular people. Your primary goal is to identify the MOST SIGNIFICANT developments across different domains of AI, based on what appears in the newsletters being analyzed. When writing headlines, focus on the substantive development rather than secondary features or demonstrations (e.g., 'Anthropic Launches Claude 3.7' rather than 'Claude AI Plays Pokémon'). Make the 'Why It Matters' section relevant to everyday life, and ensure the 'Practical Impact' section provides specific, actionable advice that regular people can implement. Format your response with markdown headings and sections.",
+        system="You are an AI consultant helping summarize AI newsletter content for regular people. Your primary goal is to identify the MOST SIGNIFICANT developments across different domains of AI, based on what appears in the newsletters being analyzed. When writing headlines, focus on the substantive development rather than secondary features or demonstrations (e.g., 'Anthropic Launches Claude 3.7' rather than 'Claude AI Plays Pokémon'). Make the 'Why It Matters' section relevant to everyday life, and ensure the 'Practical Impact' section provides specific, actionable advice that regular people can implement. Be sure to include brand new developments (even if only mentioned in 1-2 newsletters) if they appear to be significant. Format your response with markdown headings and sections.",
         messages=[
             {"role": "user", "content": prompt}
         ]
@@ -350,13 +477,15 @@ def generate_report(newsletters, topics, llm_analysis, days):
     
     # Parse dates from newsletters to determine the actual date range
     newsletter_dates = []
-    for nl in newsletters:
+    newsletter_with_dates = []
+    for i, nl in enumerate(newsletters):
         try:
             # Parse the date from each newsletter
             # The email date format can be complex, so using email.utils.parsedate_to_datetime
             from email.utils import parsedate_to_datetime
             date_obj = parsedate_to_datetime(nl['date'])
             newsletter_dates.append(date_obj)
+            newsletter_with_dates.append((i, nl, date_obj))
         except Exception as e:
             # If we can't parse the date, we'll skip this newsletter for date range calculation
             print(f"Warning: Could not parse date '{nl['date']}': {str(e)}")
@@ -376,6 +505,42 @@ def generate_report(newsletters, topics, llm_analysis, days):
         # Create date range string for filename
         filename_date_range = f"{earliest_date.strftime('%Y%m%d')}_to_{latest_date.strftime('%Y%m%d')}"
     
+    # Identify very recent newsletters (from the last day)
+    very_recent_newsletters = []
+    cutoff_date = latest_date - datetime.timedelta(days=1)
+    
+    # Use the newsletter_with_dates list we created earlier
+    for i, nl, date_obj in newsletter_with_dates:
+        if date_obj >= cutoff_date:
+            very_recent_newsletters.append(nl)
+    
+    # If we have very recent newsletters, add a "Just In" section
+    breaking_news_section = ""
+    if very_recent_newsletters:
+        breaking_news_section = "\n## JUST IN: LATEST DEVELOPMENTS\n\n"
+        breaking_news_section += "These items are from the most recent newsletters (last 24 hours) and may represent emerging trends:\n\n"
+        
+        # Look for breaking news indicators in subject lines
+        breaking_news_indicators = ['breaking', 'just in', 'just announced', 'new release', 
+                                   'launches', 'launched', 'announces', 'announced', 
+                                   'releases', 'released', 'introduces', 'introduced',
+                                   'unveils', 'unveiled', 'debuts', 'just now']
+        
+        for nl in very_recent_newsletters:
+            subject = nl['subject']
+            # Remove common newsletter prefixes like "[Newsletter]" or "Weekly:"
+            clean_subject = re.sub(r'^\[.*?\]', '', subject).strip()
+            clean_subject = re.sub(r'^.*?:', '', clean_subject).strip()
+            
+            # Check if subject contains breaking news indicators
+            highlight = any(indicator in subject.lower() for indicator in breaking_news_indicators)
+            
+            # Format the item
+            if highlight:
+                breaking_news_section += f"- 🔥 **{clean_subject}** (via {nl['sender'].split('<')[0].strip()})\n"
+            else:
+                breaking_news_section += f"- {clean_subject} (via {nl['sender'].split('<')[0].strip()})\n"
+    
     report = f"""
 # AI NEWSLETTER SUMMARY
 {date_range}
@@ -383,7 +548,13 @@ def generate_report(newsletters, topics, llm_analysis, days):
 ## TOP 5 AI DEVELOPMENTS THIS WEEK
 
 {llm_analysis}
+"""
 
+    # Add the breaking news section if it exists
+    if breaking_news_section:
+        report += breaking_news_section
+
+    report += f"""
 ## NEWSLETTER SOURCES
 
 This week's insights were gathered from {len(newsletters)} newsletters across {len(newsletter_sources)} sources:
@@ -425,6 +596,18 @@ def main():
     parser = argparse.ArgumentParser(description='Summarize AI newsletters from Gmail.')
     parser.add_argument('--days', type=int, default=7, 
                         help='Number of days to look back for newsletters (default: 7)')
+    parser.add_argument('--prioritize-recent', action='store_true',
+                        help='Give higher weight to more recent newsletters (default: enabled)')
+    parser.add_argument('--no-prioritize-recent', dest='prioritize_recent', action='store_false',
+                        help='Do not give higher weight to more recent newsletters')
+    parser.add_argument('--breaking-news-section', action='store_true',
+                        help='Add a separate "Just In" section for latest newsletters (default: enabled)')
+    parser.add_argument('--no-breaking-news-section', dest='breaking_news_section', action='store_false',
+                        help='Do not add a separate "Just In" section')
+    
+    # Set defaults
+    parser.set_defaults(prioritize_recent=True, breaking_news_section=True)
+    
     args = parser.parse_args()
     
     try:
@@ -443,7 +626,29 @@ def main():
         
         # Extract key topics
         print("Extracting key topics...")
-        topics = extract_key_topics(newsletters)
+        if args.prioritize_recent:
+            print("  - Giving priority to recent content")
+            topics = extract_key_topics(newsletters)
+        else:
+            # Create a simplified version of extract_key_topics that doesn't use recency weighting
+            # This is a quick adaptation, not ideal for production
+            all_text = " ".join([nl['body'] for nl in newsletters])
+            subjects_text = " ".join([nl['subject'] for nl in newsletters])
+            weighted_subjects = " ".join([subjects_text] * 5)
+            combined_text = all_text + " " + weighted_subjects
+            
+            stop_words = set(stopwords.words('english'))
+            additional_stops = {'ai', 'artificial', 'intelligence', 'ml', 'model', 'models', 'news', 
+                             'newsletter', 'week', 'weekly', 'new'}
+            stop_words.update(additional_stops)
+            
+            words = word_tokenize(combined_text.lower())
+            filtered_words = [word for word in words if word.isalpha() and word not in stop_words and len(word) > 3]
+            
+            from collections import Counter
+            word_freq = Counter(filtered_words)
+            topics = [topic for topic, _ in word_freq.most_common(5)]
+            
         print(f"Identified {len(topics)} key topics: {', '.join(topics)}")
         
         # Analyze content with LLM
@@ -452,7 +657,18 @@ def main():
         
         # Generate final report
         print("Generating report...")
-        report, filename_date_range = generate_report(newsletters, topics, llm_analysis, args.days)
+        if not args.breaking_news_section:
+            # Override the breaking_news_section in generate_report by creating a wrapper
+            def generate_report_without_breaking(newsletters, topics, llm_analysis, days):
+                report, filename = generate_report(newsletters, topics, llm_analysis, days)
+                # Remove the JUST IN section if present
+                import re
+                report = re.sub(r'\n## JUST IN: LATEST DEVELOPMENTS\n\n.*?\n\n## ', '\n\n## ', report, flags=re.DOTALL)
+                return report, filename
+            
+            report, filename_date_range = generate_report_without_breaking(newsletters, topics, llm_analysis, args.days)
+        else:
+            report, filename_date_range = generate_report(newsletters, topics, llm_analysis, args.days)
         
         # Save report to file
         report_filename = f"ai_newsletter_summary_{filename_date_range}.md"
