@@ -1,0 +1,51 @@
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Credentials and tokens
+credentials.json
+token.json
+*.credentials
+*.token
+
+# Generated output files
+ai_newsletter_summary_*.md
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv/
+.virtualenv/
+
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store 
