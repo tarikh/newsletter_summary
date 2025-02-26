@@ -366,9 +366,15 @@ def generate_report(newsletters, topics, llm_analysis, days):
         earliest_date = min(newsletter_dates)
         latest_date = max(newsletter_dates)
         date_range = f"## {earliest_date.strftime('%B %d')} to {latest_date.strftime('%B %d, %Y')}"
+        # Create date range string for filename
+        filename_date_range = f"{earliest_date.strftime('%Y%m%d')}_to_{latest_date.strftime('%Y%m%d')}"
     else:
         # Fallback to previous method if no dates could be parsed
-        date_range = f"## Week of {(datetime.datetime.now() - datetime.timedelta(days=days)).strftime('%B %d')} to {datetime.datetime.now().strftime('%B %d, %Y')}"
+        earliest_date = datetime.datetime.now() - datetime.timedelta(days=days)
+        latest_date = datetime.datetime.now()
+        date_range = f"## Week of {earliest_date.strftime('%B %d')} to {latest_date.strftime('%B %d, %Y')}"
+        # Create date range string for filename
+        filename_date_range = f"{earliest_date.strftime('%Y%m%d')}_to_{latest_date.strftime('%Y%m%d')}"
     
     report = f"""
 # AI NEWSLETTER SUMMARY
@@ -411,7 +417,7 @@ This week's insights were gathered from {len(newsletters)} newsletters across {l
     report += "Key topics were identified using frequency analysis and natural language processing, "
     report += "with a focus on practical implications for regular users rather than industry competition."
     
-    return report
+    return report, filename_date_range
 
 def main():
     """Main function to run the newsletter summarizer."""
@@ -446,10 +452,10 @@ def main():
         
         # Generate final report
         print("Generating report...")
-        report = generate_report(newsletters, topics, llm_analysis, args.days)
+        report, filename_date_range = generate_report(newsletters, topics, llm_analysis, args.days)
         
         # Save report to file
-        report_filename = f"ai_newsletter_summary_{datetime.datetime.now().strftime('%Y%m%d')}.md"
+        report_filename = f"ai_newsletter_summary_{filename_date_range}.md"
         with open(report_filename, 'w') as f:
             f.write(report)
         

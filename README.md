@@ -98,7 +98,7 @@ The first time you run the script, it will open a browser window for you to auth
 
 5. **View the results**
 
-The script will generate a markdown file named `ai_newsletter_summary_YYYYMMDD.md` with your summarized newsletter content.
+The script will generate a markdown file named `ai_newsletter_summary_YYYYMMDD_to_YYYYMMDD.md` with your summarized newsletter content. The filename reflects the date range of the newsletters being analyzed.
 
 ## Customization
 
