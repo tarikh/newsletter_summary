@@ -119,10 +119,6 @@ The script will generate a markdown file named `ai_newsletter_summary_YYYYMMDD.m
 
 - **API Limits**: Be aware of the rate limits for both the Gmail API and Anthropic API
 
-## License
-
-[MIT License](LICENSE)
-
 ## Acknowledgements
 
 This tool uses the Gmail API, NLTK for natural language processing, and Anthropic's Claude AI for generating insights from newsletter content. 
