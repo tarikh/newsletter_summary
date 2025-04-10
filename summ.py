@@ -73,13 +73,23 @@ def authenticate_gmail():
     
     # Check if token.json exists (for saved credentials)
     if os.path.exists('token.json'):
-        creds = Credentials.from_authorized_user_info(
-            json.loads(open('token.json').read()))
+        try:
+            creds = Credentials.from_authorized_user_info(
+                json.loads(open('token.json').read()))
+        except Exception as e:
+            print(f"Error loading credentials from token.json: {str(e)}")
+            print("Recommendation: Delete token.json and reauthenticate.")
+            raise
     
     # If no valid credentials, authenticate
     if not creds or not creds.valid:
         if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
+            try:
+                creds.refresh(Request())
+            except Exception as e:
+                print(f"Error refreshing credentials: {str(e)}")
+                print("Recommendation: Delete token.json and reauthenticate.")
+                raise
         else:
             flow = InstalledAppFlow.from_client_secrets_file(
                 'credentials.json', SCOPES)
