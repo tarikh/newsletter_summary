@@ -7,6 +7,7 @@ import spacy
 from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.text_rank import TextRankSummarizer
+import datetime
 
 def analyze_with_llm(newsletters, topics):
     """Use an LLM (like Anthropic's Claude) to provide deeper insights about key topics, with contextual summarization and NER/event detection."""
