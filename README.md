@@ -6,7 +6,8 @@ The AI Newsletter Summarizer is a Python tool designed to automatically retrieve
 
 - Automatically fetches emails tagged with "ai-newsletter" from your Gmail account
 - Extracts and analyzes content from multiple newsletter sources
-- Identifies key topics and trends across newsletters using NLP techniques
+- Identifies key topics and trends across newsletters using advanced NLP techniques
+- **Contextual Summarization & NER:** For each topic, extracts key entities (ORG, PERSON, PRODUCT, etc.), event-related sentences, and context snippets using spaCy and sumy, and provides these to the LLM for richer, more actionable summaries
 - Prioritizes recent content and breaking news (configurable)
 - Uses Anthropic's Claude AI to generate summaries focused on practical applications and real-world impact
 - Outputs a markdown report with the top 5 AI developments, why they matter, and actionable insights
@@ -15,12 +16,12 @@ The AI Newsletter Summarizer is a Python tool designed to automatically retrieve
 
 ## Requirements
 
-- Python 3.7+
+- Python 3.11 (recommended), or 3.10 (also supported)
 - Gmail account with newsletters tagged/labeled as `ai-newsletter`
 - Google API credentials (`credentials.json`) obtained from Google Cloud Console
 - Anthropic API key (set as `ANTHROPIC_API_KEY` environment variable)
-- **New:**
-  - `keybert`, `sentence-transformers`, and `scikit-learn` (for advanced topic extraction)
+- `keybert`, `sentence-transformers`, `scikit-learn` (for advanced topic extraction)
+- `spacy`, `sumy` (for contextual summarization and NER/event detection)
 
 ## Installation
 
@@ -34,7 +35,8 @@ The AI Newsletter Summarizer is a Python tool designed to automatically retrieve
 2.  **Set up a virtual environment (Recommended)**
 
     ```bash
-    python -m venv venv
+    # Use Python 3.11 (recommended)
+    python3.11 -m venv venv
     source venv/bin/activate  # On macOS/Linux
     # venv\Scripts\activate  # On Windows
     ```
@@ -42,7 +44,10 @@ The AI Newsletter Summarizer is a Python tool designed to automatically retrieve
 3.  **Install dependencies**
 
     ```bash
+    pip install --upgrade pip setuptools wheel
     pip install -r requirements.txt
+    # Download spaCy English model
+    python -m spacy download en_core_web_sm
     ```
 
 4.  **Set up Google OAuth credentials**
@@ -112,6 +117,12 @@ The AI Newsletter Summarizer is a Python tool designed to automatically retrieve
 
     The tool will output progress messages to the console. Once finished, it will generate a markdown file named `ai_newsletter_summary_YYYYMMDD_to_YYYYMMDD_HHMM.md` in the project directory. The filename reflects the actual date range of the newsletters analyzed **and the time of the summary run**, so multiple runs in a day will not overwrite each other. Open this file to view your summarized report.
 
+    **Each topic in the summary now includes:**
+    - Key entities (organizations, people, products, etc.)
+    - Key event sentences (launches, announcements, etc.)
+    - Contextual snippets (summarized sentences)
+    - All of this is provided to the LLM for more informative and actionable summaries.
+
 ## Command-line Options
 
 You can modify the tool's behavior using these optional flags:
@@ -176,17 +187,19 @@ For more advanced modifications:
 
 ## Troubleshooting
 
+-   **NumPy Build Errors / Python Version:** If you encounter errors building NumPy or other scientific packages, use Python 3.11 (recommended) or 3.10. Python 3.12+ and 3.13 may not be fully supported by all dependencies yet.
 -   **NLTK Resource Errors**: If you encounter errors like `Resource punkt not found.` during the first run, the tool attempts to download them automatically. If automatic download fails (e.g., due to network issues), you might need to run the following in a Python interpreter within your activated virtual environment:
     ```python
     import nltk
     nltk.download('punkt')
     nltk.download('stopwords')
     ```
-
+-   **spaCy Model Not Found**: If you see an error about `en_core_web_sm` not found, run:
+    ```bash
+    python -m spacy download en_core_web_sm
+    ```
 -   **Authentication Issues / `token.json` Errors**: If you face persistent authentication problems or errors related to `token.json`, try deleting the `token.json` file and re-running the tool. This will force the authentication flow again. Ensure your `credentials.json` file is correct and hasn't been revoked in Google Cloud Console.
-
 -   **API Rate Limits**: Be aware that both the Gmail API and the Anthropic API have usage limits. If you process a very large number of newsletters frequently, you might encounter rate limiting. Check the respective documentation for details.
-
 -   **No Newsletters Found**: Ensure you have emails with the exact label `ai-newsletter` within the specified `--days` range. Check for typos in the label name.
 
 ## Functional Specification
