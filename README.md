@@ -14,6 +14,35 @@ The AI Newsletter Summarizer is a Python tool designed to automatically retrieve
 - Includes links to newsletter sources and a brief methodology section
 - **Modular codebase**: Authentication, fetching, NLP, LLM analysis, and reporting are now in separate modules for easier maintenance and extension
 
+## Newsletter Website Cache & Review Workflow
+
+The tool caches detected newsletter websites for each source and marks them as **verified** or **unverified**:
+- **Verified:** Trusted and used for future runs.
+- **Unverified:** Used as a fallback, but will be replaced if a better guess or curated mapping is found.
+- **Curated mapping:** Always takes precedence and is always trusted.
+
+### How to Review and Confirm Newsletter Websites
+
+1. **After running the tool**, review the detected websites for accuracy:
+
+    ```bash
+    python review_newsletter_websites.py
+    ```
+
+    For each unverified entry, you can:
+    - `[a]ccept` to mark as verified
+    - `[e]dit` to correct the website and mark as verified
+    - `[d]elete` to remove the entry (it will be re-guessed next run)
+    - `[s]kip` to leave it unverified for now
+
+2. **Why review?**
+    - Ensures your report always links to the correct main site for each newsletter.
+    - Prevents bad guesses (e.g., tracking links, forms) from persisting in your reports.
+    - Lets you maintain high-quality, human-verified source links.
+
+3. **How to extend the curated mapping:**
+    - Edit the `curated_websites` dictionary in `report.py` to add or update known newsletters and their homepages. These are always trusted and override guesses.
+
 ## Requirements
 
 - Python 3.11 (recommended), or 3.10 (also supported)
@@ -201,6 +230,10 @@ For more advanced modifications:
 -   **Authentication Issues / `token.json` Errors**: If you face persistent authentication problems or errors related to `token.json`, try deleting the `token.json` file and re-running the tool. This will force the authentication flow again. Ensure your `credentials.json` file is correct and hasn't been revoked in Google Cloud Console.
 -   **API Rate Limits**: Be aware that both the Gmail API and the Anthropic API have usage limits. If you process a very large number of newsletters frequently, you might encounter rate limiting. Check the respective documentation for details.
 -   **No Newsletters Found**: Ensure you have emails with the exact label `ai-newsletter` within the specified `--days` range. Check for typos in the label name.
+-   **Newsletter Website Links Are Wrong:**
+    - Run `python review_newsletter_websites.py` to review and correct cached websites.
+    - Extend the curated mapping in `report.py` for newsletters you read often.
+    - Delete `newsletter_websites.json` to force a full re-detection if needed.
 
 ## Functional Specification
 

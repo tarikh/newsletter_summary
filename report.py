@@ -1,6 +1,9 @@
 import re
 from collections import Counter
 import datetime
+import json
+import os
+from urllib.parse import urlparse
 
 def generate_report(newsletters, topics, llm_analysis, days):
     """Generate a final report with key insights."""
@@ -58,6 +61,46 @@ def generate_report(newsletters, topics, llm_analysis, days):
 """
     if breaking_news_section:
         report += breaking_news_section
+    # Load or initialize website cache
+    website_cache_path = 'newsletter_websites.json'
+    if os.path.exists(website_cache_path):
+        with open(website_cache_path, 'r') as f:
+            website_cache = json.load(f)
+    else:
+        website_cache = {}
+    # Curated mapping for known newsletters (extend as needed)
+    curated_websites = {
+        'the neuron': 'https://www.theneurondaily.com',
+        'tldr ai': 'https://www.tldrnewsletter.com',
+        'tldr': 'https://www.tldrnewsletter.com',
+        'the rundown ai': 'https://www.therundown.ai',
+        'ai breakfast': 'https://aibreakfast.substack.com',
+        "ben's bites": 'https://www.bensbites.co',
+        'alpha signal': 'https://alphasignal.ai',
+        'unwind ai': 'https://unwindai.com',
+        'simon willison': 'https://simonwillison.net',
+        'peter yang': 'https://creatoreconomy.so',
+        # Add more as needed
+    }
+    def normalize(text):
+        return re.sub(r'[^a-z0-9]', '', text.lower())
+    def domain_from_email(email):
+        domain = email.split('@')[-1]
+        domain = re.sub(r'^(mail|news|info|newsletter)\.', '', domain)
+        return domain
+    def plausible_homepage_from_body(body, newsletter_name=None):
+        urls = re.findall(r'https?://[\w\.-]+(?:/[\w\-\./?%&=]*)?', body)
+        # Filter out forms, tracking, deep paths, etc.
+        filtered = [u for u in urls if not any(x in u for x in ['form', 'track', 'unsubscribe', 'pixel', 'img', 'logo', 'pricing', 'cdn-cgi', 'utm_', 'jwt_token', 'viewform'])]
+        # Prefer root domains
+        for url in filtered:
+            parsed = urlparse(url)
+            if parsed.path in ('', '/', '/home'):
+                return url
+        # As fallback, return first filtered
+        if filtered:
+            return filtered[0]
+        return None
     report += f"""
 ## NEWSLETTER SOURCES
 
@@ -70,16 +113,51 @@ This week's insights were gathered from {len(newsletters)} newsletters across {l
             match = re.match(r'(.*?)\s*<(.+?)>', source)
             if match:
                 name, email = match.groups()
-                domain = email.split('@')[-1]
-                web_link = f"https://www.{domain}"
-                report += f"- [{name.strip()}](mailto:{email}) ([Website]({web_link})) - {count} issues\n"
             else:
-                if '@' in source:
-                    domain = source.split('@')[-1]
-                    web_link = f"https://www.{domain}"
-                    report += f"- [{source}](mailto:{source}) ([Website]({web_link})) - {count} issues\n"
+                name = source
+                email = None
+            cache_key = name.strip().lower()
+            cache_entry = website_cache.get(cache_key)
+            website_url = None
+            verified = False
+            # 1. Curated mapping
+            norm_name = normalize(name)
+            curated_match = None
+            for k, v in curated_websites.items():
+                if normalize(k) in norm_name:
+                    curated_match = v
+                    break
+            if cache_entry and cache_entry.get('verified'):
+                website_url = cache_entry['url']
+                verified = True
+            elif curated_match:
+                website_url = curated_match
+                verified = True
+            # 2. Sender domain if it matches newsletter name
+            if not website_url and email:
+                domain = domain_from_email(email)
+                if any(part in domain for part in norm_name.split() if len(part) > 3):
+                    website_url = f"https://{domain}"
+                    verified = False
+            # 3. Fallback: plausible homepage from body
+            if not website_url:
+                website_url = plausible_homepage_from_body(matching_nl['body'], newsletter_name=name)
+                verified = False
+            # Update cache
+            if website_url:
+                # If from curated, always mark as verified
+                if curated_match and website_url == curated_match:
+                    website_cache[cache_key] = {"url": website_url, "verified": True}
                 else:
-                    report += f"- [{source}](mailto:{source}) - {count} issues\n"
+                    website_cache[cache_key] = {"url": website_url, "verified": verified}
+            # Format: - [Newsletter Name](Website URL) - N issues
+            if website_url:
+                report += f"- [{name.strip()}]({website_url}) - {count} issues\n"
+            else:
+                report += f"- {name.strip()} - {count} issues\n"
+    # Save updated cache
+    with open(website_cache_path, 'w') as f:
+        json.dump(website_cache, f, indent=2)
     report += "\n## METHODOLOGY\n"
     report += "This report was generated by analyzing AI newsletters tagged in Gmail. "
     report += "Key topics were identified using frequency analysis and natural language processing, "

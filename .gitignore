@@ -48,4 +48,7 @@ env/
 .vscode/
 *.swp
 *.swo
-.DS_Store 
+.DS_Store
+
+# Newsletter websites
+newsletter_websites.json 
