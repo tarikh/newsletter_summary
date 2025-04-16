@@ -4,7 +4,7 @@ load_dotenv('.env.local')
 import argparse
 from auth import authenticate_gmail
 from fetch import get_ai_newsletters
-from nlp import extract_key_topics
+from nlp import extract_key_topics_keybert, extract_key_topics
 from llm import analyze_with_llm
 from report import generate_report
 
@@ -20,6 +20,8 @@ def main():
                         help='Add a separate "Just In" section for latest newsletters (default: enabled)')
     parser.add_argument('--no-breaking-news-section', dest='breaking_news_section', action='store_false',
                         help='Do not add a separate "Just In" section')
+    parser.add_argument('--nlp-method', choices=['keybert', 'classic'], default='keybert',
+                        help='NLP technique for topic extraction: keybert (default) or classic')
     parser.set_defaults(prioritize_recent=True, breaking_news_section=True)
     args = parser.parse_args()
     try:
@@ -32,25 +34,12 @@ def main():
             print("No newsletters found. Check your Gmail labels or date range.")
             return
         print("Extracting key topics...")
-        if args.prioritize_recent:
-            print("  - Giving priority to recent content")
-            topics = extract_key_topics(newsletters)
+        if args.nlp_method == 'keybert':
+            print("  - Using KeyBERT + semantic clustering")
+            topics = extract_key_topics_keybert(newsletters)
         else:
-            all_text = " ".join([nl['body'] for nl in newsletters])
-            subjects_text = " ".join([nl['subject'] for nl in newsletters])
-            weighted_subjects = " ".join([subjects_text] * 5)
-            combined_text = all_text + " " + weighted_subjects
-            from nltk.corpus import stopwords
-            from nltk.tokenize import word_tokenize
-            stop_words = set(stopwords.words('english'))
-            additional_stops = {'ai', 'artificial', 'intelligence', 'ml', 'model', 'models', 'news', 
-                             'newsletter', 'week', 'weekly', 'new'}
-            stop_words.update(additional_stops)
-            words = word_tokenize(combined_text.lower())
-            filtered_words = [word for word in words if word.isalpha() and word not in stop_words and len(word) > 3]
-            from collections import Counter
-            word_freq = Counter(filtered_words)
-            topics = [topic for topic, _ in word_freq.most_common(5)]
+            print("  - Using classic n-gram frequency method")
+            topics = extract_key_topics(newsletters)
         print(f"Identified {len(topics)} key topics: {', '.join(topics)}")
         print("Analyzing newsletter content...")
         llm_analysis = analyze_with_llm(newsletters, topics)

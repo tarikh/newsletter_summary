@@ -18,13 +18,14 @@ def generate_report(newsletters, topics, llm_analysis, days):
     if newsletter_dates:
         earliest_date = min(newsletter_dates)
         latest_date = max(newsletter_dates)
-        date_range = f"## {earliest_date.strftime('%B %d')} to {latest_date.strftime('%B %d, %Y')}"
-        filename_date_range = f"{earliest_date.strftime('%Y%m%d')}_to_{latest_date.strftime('%Y%m%d')}"
+        run_time = datetime.datetime.now()
+        date_range = f"## {earliest_date.strftime('%B %d')} to {latest_date.strftime('%B %d, %Y, %H:%M')} (summary run at {run_time.strftime('%Y-%m-%d %H:%M')})"
+        filename_date_range = f"{earliest_date.strftime('%Y%m%d')}_to_{run_time.strftime('%Y%m%d_%H%M')}"
     else:
         earliest_date = datetime.datetime.now() - datetime.timedelta(days=days)
-        latest_date = datetime.datetime.now()
-        date_range = f"## Week of {earliest_date.strftime('%B %d')} to {latest_date.strftime('%B %d, %Y')}"
-        filename_date_range = f"{earliest_date.strftime('%Y%m%d')}_to_{latest_date.strftime('%Y%m%d')}"
+        run_time = datetime.datetime.now()
+        date_range = f"## Week of {earliest_date.strftime('%B %d')} to {run_time.strftime('%B %d, %Y, %H:%M')} (summary run at {run_time.strftime('%Y-%m-%d %H:%M')})"
+        filename_date_range = f"{earliest_date.strftime('%Y%m%d')}_to_{run_time.strftime('%Y%m%d_%H%M')}"
     very_recent_newsletters = []
     cutoff_date = latest_date - datetime.timedelta(days=1)
     for i, nl, date_obj in newsletter_with_dates:

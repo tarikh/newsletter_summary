@@ -19,6 +19,8 @@ The AI Newsletter Summarizer is a Python tool designed to automatically retrieve
 - Gmail account with newsletters tagged/labeled as `ai-newsletter`
 - Google API credentials (`credentials.json`) obtained from Google Cloud Console
 - Anthropic API key (set as `ANTHROPIC_API_KEY` environment variable)
+- **New:**
+  - `keybert`, `sentence-transformers`, and `scikit-learn` (for advanced topic extraction)
 
 ## Installation
 
@@ -90,6 +92,15 @@ The AI Newsletter Summarizer is a Python tool designed to automatically retrieve
 
     By default, this analyzes newsletters from the past 7 days. See Command-line Options below to customize.
 
+    **Example: Use the advanced KeyBERT-based NLP method (default):**
+    ```bash
+    python main.py --days 3 --nlp-method keybert
+    ```
+    **Example: Use the classic n-gram frequency method:**
+    ```bash
+    python main.py --days 3 --nlp-method classic
+    ```
+
 4.  **First-time Authentication**
 
     The *very first time* you run the tool, it will open a browser window. You'll need to:
@@ -99,7 +110,7 @@ The AI Newsletter Summarizer is a Python tool designed to automatically retrieve
 
 5.  **View the Results**
 
-    The tool will output progress messages to the console. Once finished, it will generate a markdown file named `ai_newsletter_summary_YYYYMMDD_to_YYYYMMDD.md` in the project directory. The filename reflects the actual date range of the newsletters analyzed. Open this file to view your summarized report.
+    The tool will output progress messages to the console. Once finished, it will generate a markdown file named `ai_newsletter_summary_YYYYMMDD_to_YYYYMMDD_HHMM.md` in the project directory. The filename reflects the actual date range of the newsletters analyzed **and the time of the summary run**, so multiple runs in a day will not overwrite each other. Open this file to view your summarized report.
 
 ## Command-line Options
 
@@ -122,6 +133,25 @@ You can modify the tool's behavior using these optional flags:
     python main.py --no-breaking-news-section
     ```
     (Default: enabled)
+
+-   `--nlp-method keybert|classic`: Choose the NLP technique for topic extraction. `keybert` uses KeyBERT and semantic clustering (default), `classic` uses the original n-gram frequency method.
+    ```bash
+    python main.py --nlp-method classic
+    ```
+    (Default: `keybert`)
+
+-   `-h` / `--help`: Show all available command-line options and usage examples.
+
+## NLP Topic Extraction Methods
+
+- **KeyBERT + Semantic Clustering (default):**
+  - Extracts candidate keyphrases using KeyBERT, then clusters them using sentence-transformers embeddings.
+  - Dynamically adjusts the number of clusters to the data volume.
+  - If not enough distinct topics are found, fills in with the next best keyphrases or falls back to the classic method.
+  - **Always returns the requested number of topics if possible, even with thin data.**
+
+- **Classic n-gram Frequency:**
+  - Uses frequency analysis of n-grams and subject lines to extract topics.
 
 ## Modular Architecture
 

@@ -3,6 +3,9 @@ from collections import Counter
 import nltk
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
+from keybert import KeyBERT
+from sentence_transformers import SentenceTransformer
+from sklearn.cluster import AgglomerativeClustering
 
 def extract_key_topics(newsletters, num_topics=5):
     """Extract key topics from newsletters using more advanced NLP techniques."""
@@ -128,4 +131,54 @@ def extract_key_topics(newsletters, num_topics=5):
     if len(final_topics) < num_topics:
         remaining_topics = [t for t, _ in candidate_topics if t not in ' '.join(final_topics)]
         final_topics.extend(remaining_topics[:num_topics - len(final_topics)])
-    return final_topics[:num_topics] 
+    return final_topics[:num_topics]
+
+def extract_key_topics_keybert(newsletters, num_topics=5, ngram_range=(1,3), top_n_candidates=30):
+    """Extract key topics using KeyBERT and semantic clustering with dynamic adjustment and fallback."""
+    text = " ".join(nl['body'] + " " + nl['subject'] for nl in newsletters)
+    kw_model = KeyBERT(model='all-MiniLM-L6-v2')
+    keyphrases_with_scores = kw_model.extract_keywords(
+        text,
+        keyphrase_ngram_range=ngram_range,
+        stop_words='english',
+        top_n=top_n_candidates
+    )
+    keyphrases = [phrase for phrase, score in keyphrases_with_scores]
+    if not keyphrases:
+        return []
+    embedder = SentenceTransformer('all-MiniLM-L6-v2')
+    embeddings = embedder.encode(keyphrases)
+    n_clusters = min(num_topics, len(keyphrases))
+    if n_clusters < 2:
+        return keyphrases[:num_topics]
+    clustering = AgglomerativeClustering(n_clusters=n_clusters)
+    labels = clustering.fit_predict(embeddings)
+    cluster_to_phrases = {i: [] for i in range(n_clusters)}
+    for idx, label in enumerate(labels):
+        cluster_to_phrases[label].append((keyphrases[idx], keyphrases_with_scores[idx][1]))
+    topics = []
+    used_indices = set()
+    for phrases in cluster_to_phrases.values():
+        phrases.sort(key=lambda x: x[1], reverse=True)
+        top_phrase = phrases[0][0]
+        topics.append(top_phrase)
+        # Mark all indices in this cluster as used
+        for phrase, _ in phrases:
+            if phrase in keyphrases:
+                used_indices.add(keyphrases.index(phrase))
+    # If we have fewer than num_topics, fill in with next best unclustered keyphrases
+    if len(topics) < num_topics:
+        for idx, (phrase, _) in enumerate(keyphrases_with_scores):
+            if idx not in used_indices and phrase not in topics:
+                topics.append(phrase)
+            if len(topics) >= num_topics:
+                break
+    # If still not enough, fall back to classic method
+    if len(topics) < num_topics:
+        classic_topics = extract_key_topics(newsletters, num_topics=num_topics)
+        for topic in classic_topics:
+            if topic not in topics:
+                topics.append(topic)
+            if len(topics) >= num_topics:
+                break
+    return topics[:num_topics] 
