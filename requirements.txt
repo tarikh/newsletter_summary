@@ -50,3 +50,5 @@ urllib3==1.26.20
 keybert
 sentence-transformers
 scikit-learn
+spacy
+sumy

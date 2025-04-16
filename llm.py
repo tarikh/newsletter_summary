@@ -2,22 +2,53 @@ import os
 import re
 import anthropic
 from nltk.tokenize import sent_tokenize
+# New imports for contextual summarization and NER/event detection
+import spacy
+from sumy.parsers.plaintext import PlaintextParser
+from sumy.nlp.tokenizers import Tokenizer
+from sumy.summarizers.text_rank import TextRankSummarizer
 
 def analyze_with_llm(newsletters, topics):
-    """Use an LLM (like Anthropic's Claude) to provide deeper insights about key topics."""
+    """Use an LLM (like Anthropic's Claude) to provide deeper insights about key topics, with contextual summarization and NER/event detection."""
     anthropic_client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
-    topic_snippets = {}
+    nlp = spacy.load("en_core_web_sm")
+    summarizer = TextRankSummarizer()
+    topic_context = {}
+    event_verbs = [
+        'launch', 'launched', 'announce', 'announced', 'release', 'released',
+        'introduce', 'introduced', 'unveil', 'unveiled', 'debut', 'acquire', 'acquired',
+        'partner', 'partnered', 'merge', 'merged', 'invest', 'invested', 'fund', 'funded',
+        'appoint', 'appointed', 'join', 'joined', 'expand', 'expanded', 'collaborate', 'collaborated'
+    ]
     for topic in topics:
         base_topic = topic.split(' (')[0] if ' (' in topic else topic
         related_terms = re.findall(r'\((.*?)\)', topic)[0].split(', ') if ' (' in topic else []
         search_terms = [base_topic] + related_terms
-        snippets = []
+        # Gather all sentences relevant to the topic
+        all_sentences = []
+        all_text = ""
         for nl in newsletters:
             sentences = sent_tokenize(nl['body'])
             for sentence in sentences:
                 if any(term.lower() in sentence.lower() for term in search_terms):
-                    snippets.append(sentence)
-        topic_snippets[base_topic] = snippets[:10]
+                    all_sentences.append(sentence)
+                    all_text += sentence + " "
+        # Contextual summarization using TextRank
+        parser = PlaintextParser.from_string(all_text, Tokenizer("english"))
+        summary_sentences = [str(s) for s in summarizer(parser.document, 5)]
+        # NER using spaCy
+        doc = nlp(all_text)
+        entities = set([ent.text for ent in doc.ents if ent.label_ in {"ORG", "PERSON", "PRODUCT", "GPE", "EVENT"}])
+        # Event detection: sentences with event verbs
+        event_sentences = []
+        for sent in doc.sents:
+            if any(verb in sent.text.lower() for verb in event_verbs):
+                event_sentences.append(sent.text)
+        topic_context[base_topic] = {
+            "entities": list(entities)[:10],
+            "events": event_sentences[:5],
+            "snippets": summary_sentences if summary_sentences else all_sentences[:5]
+        }
     from email.utils import parsedate_to_datetime
     newsletter_with_dates = []
     for i, nl in enumerate(newsletters):
@@ -53,9 +84,11 @@ def analyze_with_llm(newsletters, topics):
                 'is_breaking': True
             })
     prompt = """Based on the following AI newsletter content, identify and analyze the 5 most important developments or trends. Focus on DIVERSITY - ensure you cover distinct topics rather than different aspects of the same topic:\n\n"""
-    for topic, snippets in topic_snippets.items():
+    for topic, context in topic_context.items():
         prompt += f"TOPIC: {topic}\n"
-        prompt += f"SNIPPETS: {' '.join(snippets[:5])}\n\n"
+        prompt += f"KEY ENTITIES: {', '.join(context['entities'])}\n"
+        prompt += f"KEY EVENTS: {' | '.join(context['events'])}\n"
+        prompt += f"CONTEXT SNIPPETS: {' '.join(context['snippets'])}\n\n"
     if recent_developments:
         prompt += "RECENT BREAKING DEVELOPMENTS (These may be significant even if mentioned in fewer newsletters):\n\n"
         for dev in recent_developments:
