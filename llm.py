@@ -8,10 +8,18 @@ from sumy.parsers.plaintext import PlaintextParser
 from sumy.nlp.tokenizers import Tokenizer
 from sumy.summarizers.text_rank import TextRankSummarizer
 import datetime
+# Add OpenAI import
+try:
+    import openai
+except ImportError:
+    openai = None
 
-def analyze_with_llm(newsletters, topics):
-    """Use an LLM (like Anthropic's Claude) to provide deeper insights about key topics, with contextual summarization and NER/event detection."""
-    anthropic_client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+def analyze_with_llm(newsletters, topics, provider='claude'):
+    """
+    Use an LLM (Anthropic Claude 3.7 Sonnet or OpenAI GPT-4.1) to provide deeper insights about key topics,
+    with contextual summarization and NER/event detection.
+    provider: 'claude' (default) or 'openai'
+    """
     nlp = spacy.load("en_core_web_sm")
     summarizer = TextRankSummarizer()
     topic_context = {}
@@ -96,13 +104,34 @@ def analyze_with_llm(newsletters, topics):
             prompt += f"SUBJECT: {dev['subject']}\n"
             prompt += f"DATE: {dev['date']}\n"
             prompt += f"CONTENT: {dev['content'][:500]}...\n\n"
-    prompt += """\nPlease format your response as follows for each of the top 5 developments, ensuring DIVERSITY across topics:\n\n### 1. [Most Significant Development]\n**What's New:** [Brief description of what happened, prioritizing the core development rather than secondary features]\n**Why It Matters:** [Clear explanation for regular people about why this matters in their daily lives]\n**Practical Impact:** [2-3 specific actions, opportunities, or ways regular people can benefit from or engage with this development]\n\nIMPORTANT GUIDELINES:\n1. Headlines should focus on the most significant aspects from the newsletters - whether it's a major product launch, important research, policy change, or industry trend\n2. When a major development appears in multiple newsletters, prioritize it appropriately\n3. For product launches, focus on the product itself, not demonstrations (e.g., \"Anthropic Launches Claude 3.7 Sonnet\" rather than \"Claude AI Plays Pokémon\")\n4. Ensure all 5 topics are DISTINCT from each other - avoid multiple topics about the same general subject\n5. If you see multiple submissions about the same topic (e.g., multiple security issues), consolidate them into ONE topic\n6. \"Why It Matters\" should explain real-world implications for regular users, not just the tech industry\n7. \"Practical Impact\" must be truly actionable - what can regular people DO with this information?\n8. Keep each section concise but informative\n9. Sort by importance (most important first)\n10. IMPORTANT: Pay close attention to the RECENT BREAKING DEVELOPMENTS section - these items may be significant even if they're not mentioned in many newsletters, because they're very new. Include at least one of these if it's substantive and important.\n\nLook broadly across different domains like: AI applications, new models, business developments, security, ethics, regulation, research breakthroughs, etc.\n"""
-    response = anthropic_client.messages.create(
-        model="claude-3-opus-20240229",
-        max_tokens=2000,
-        system="You are an AI consultant helping summarize AI newsletter content for regular people. Your primary goal is to identify the MOST SIGNIFICANT developments across different domains of AI, based on what appears in the newsletters being analyzed. When writing headlines, focus on the substantive development rather than secondary features or demonstrations (e.g., 'Anthropic Launches Claude 3.7' rather than 'Claude AI Plays Pokémon'). Make the 'Why It Matters' section relevant to everyday life, and ensure the 'Practical Impact' section provides specific, actionable advice that regular people can implement. Be sure to include brand new developments (even if only mentioned in 1-2 newsletters) if they appear to be significant. Format your response with markdown headings and sections.",
-        messages=[
-            {"role": "user", "content": prompt}
-        ]
-    )
-    return response.content[0].text 
+    prompt += """\nPlease format your response as follows for each of the top 5 developments, ensuring DIVERSITY across topics:\n\n### 1. [Most Significant Development]\n**What's New:** [Brief description of what happened, prioritizing the core development rather than secondary features]\n**Why It Matters:** [Clear explanation for regular people about why this matters in their daily lives]\n**Practical Impact:** [2-3 specific actions, opportunities, or ways regular people can benefit from or engage with this development]\n\nIMPORTANT GUIDELINES:\n1. Headlines should focus on the most significant aspects from the newsletters - whether it's a major product launch, important research, policy change, or industry trend\n2. When a major development appears in multiple newsletters, prioritize it appropriately\n3. For product launches, focus on the product itself, not demonstrations (e.g., \\\"Anthropic Launches Claude 3.7 Sonnet\\\" rather than \\\"Claude AI Plays Pokémon\\\")\n4. Ensure all 5 topics are DISTINCT from each other - avoid multiple topics about the same general subject\n5. If you see multiple submissions about the same topic (e.g., multiple security issues), consolidate them into ONE topic\n6. \\\"Why It Matters\\\" should explain real-world implications for regular users, not just the tech industry\n7. \\\"Practical Impact\\\" must be truly actionable - what can regular people DO with this information?\n8. Keep each section concise but informative\n9. Sort by importance (most important first)\n10. IMPORTANT: Pay close attention to the RECENT BREAKING DEVELOPMENTS section - these items may be significant even if they're not mentioned in many newsletters, because they're very new. Include at least one of these if it's substantive and important.\n\nLook broadly across different domains like: AI applications, new models, business developments, security, ethics, regulation, research breakthroughs, etc.\n"""
+    if provider == 'claude':
+        anthropic_client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+        # Use Claude 3.7 Sonnet
+        response = anthropic_client.messages.create(
+            model="claude-3-7-sonnet-20250219",
+            max_tokens=2000,
+            system="You are an AI consultant helping summarize AI newsletter content for regular people. Your primary goal is to identify the MOST SIGNIFICANT developments across different domains of AI, based on what appears in the newsletters being analyzed. When writing headlines, focus on the substantive development rather than secondary features or demonstrations (e.g., 'Anthropic Launches Claude 3.7' rather than 'Claude AI Plays Pokémon'). Make the 'Why It Matters' section relevant to everyday life, and ensure the 'Practical Impact' section provides specific, actionable advice that regular people can implement. Be sure to include brand new developments (even if only mentioned in 1-2 newsletters) if they appear to be significant. Format your response with markdown headings and sections.",
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
+        )
+        return response.content[0].text
+    elif provider == 'openai':
+        if openai is None:
+            raise ImportError("openai package is not installed. Please install openai to use this provider.")
+        openai_api_key = os.environ.get("OPENAI_API_KEY")
+        if not openai_api_key:
+            raise ValueError("OPENAI_API_KEY environment variable is required for OpenAI provider.")
+        # Use the new OpenAI client interface (v1.x+)
+        client = openai.OpenAI(api_key=openai_api_key)
+        completion = client.chat.completions.create(
+            model="gpt-4.1-2025-04-14",
+            messages=[
+                {"role": "system", "content": "You are an AI consultant helping summarize AI newsletter content for regular people. Your primary goal is to identify the MOST SIGNIFICANT developments across different domains of AI, based on what appears in the newsletters being analyzed. When writing headlines, focus on the substantive development rather than secondary features or demonstrations (e.g., 'Anthropic Launches Claude 3.7' rather than 'Claude AI Plays Pokémon'). Make the 'Why It Matters' section relevant to everyday life, and ensure the 'Practical Impact' section provides specific, actionable advice that regular people can implement. Be sure to include brand new developments (even if only mentioned in 1-2 newsletters) if they appear to be significant. Format your response with markdown headings and sections."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        return completion.choices[0].message.content
+    else:
+        raise ValueError(f"Unknown LLM provider: {provider}") 

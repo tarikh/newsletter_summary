@@ -22,6 +22,8 @@ def main():
                         help='Do not add a separate "Just In" section')
     parser.add_argument('--nlp-method', choices=['keybert', 'classic'], default='keybert',
                         help='NLP technique for topic extraction: keybert (default) or classic')
+    parser.add_argument('--llm-provider', choices=['claude', 'openai'], default='openai',
+                        help='LLM provider for summarization: claude (Claude 3.7 Sonnet) or openai (default, GPT-4.1)')
     parser.set_defaults(prioritize_recent=True, breaking_news_section=True)
     args = parser.parse_args()
     try:
@@ -42,7 +44,7 @@ def main():
             topics = extract_key_topics(newsletters)
         print(f"Identified {len(topics)} key topics: {', '.join(topics)}")
         print("Analyzing newsletter content...")
-        llm_analysis = analyze_with_llm(newsletters, topics)
+        llm_analysis = analyze_with_llm(newsletters, topics, provider=args.llm_provider)
         print("Generating report...")
         if not args.breaking_news_section:
             def generate_report_without_breaking(newsletters, topics, llm_analysis, days):
