@@ -1,6 +1,6 @@
 # AI Newsletter Summarizer
 
-The AI Newsletter Summarizer is a Python script designed to automatically retrieve, analyze, and summarize AI-focused newsletters from a user's Gmail account. It aims to distill key developments and actionable insights from multiple newsletters into a concise, easy-to-understand report targeted at regular users, rather than just AI experts.
+The AI Newsletter Summarizer is a Python tool designed to automatically retrieve, analyze, and summarize AI-focused newsletters from a user's Gmail account. It distills key developments and actionable insights from multiple newsletters into a concise, easy-to-understand report targeted at regular users, rather than just AI experts.
 
 ## Features
 
@@ -11,6 +11,7 @@ The AI Newsletter Summarizer is a Python script designed to automatically retrie
 - Uses Anthropic's Claude AI to generate summaries focused on practical applications and real-world impact
 - Outputs a markdown report with the top 5 AI developments, why they matter, and actionable insights
 - Includes links to newsletter sources and a brief methodology section
+- **Modular codebase**: Authentication, fetching, NLP, LLM analysis, and reporting are now in separate modules for easier maintenance and extension
 
 ## Requirements
 
@@ -24,7 +25,6 @@ The AI Newsletter Summarizer is a Python script designed to automatically retrie
 1.  **Clone the repository**
 
     ```bash
-    # Replace 'yourusername' if you forked the repo
     git clone https://github.com/yourusername/newsletter_summary.git
     cd newsletter_summary
     ```
@@ -32,14 +32,9 @@ The AI Newsletter Summarizer is a Python script designed to automatically retrie
 2.  **Set up a virtual environment (Recommended)**
 
     ```bash
-    # Create a virtual environment
     python -m venv venv
-
-    # Activate the virtual environment
-    # On macOS/Linux:
-    source venv/bin/activate
-    # On Windows:
-    # venv\Scripts\activate
+    source venv/bin/activate  # On macOS/Linux
+    # venv\Scripts\activate  # On Windows
     ```
 
 3.  **Install dependencies**
@@ -50,18 +45,18 @@ The AI Newsletter Summarizer is a Python script designed to automatically retrie
 
 4.  **Set up Google OAuth credentials**
 
-    -   Go to the [Google Cloud Console](https://console.cloud.google.com/)
-    -   Create a new project or select an existing one.
-    -   Enable the **Gmail API** for your project.
-    -   Go to "Credentials", click "Create Credentials", and select "OAuth client ID".
-    -   Choose "Desktop application" as the application type.
-    -   Download the credentials JSON file.
-    -   **Rename and save the downloaded file as `credentials.json`** in the project's root directory.
+    - Go to the [Google Cloud Console](https://console.cloud.google.com/)
+    - Create a new project or select an existing one.
+    - Enable the **Gmail API** for your project.
+    - Go to "Credentials", click "Create Credentials", and select "OAuth client ID".
+    - Choose "Desktop application" as the application type.
+    - Download the credentials JSON file.
+    - **Rename and save the downloaded file as `credentials.json`** in the project's root directory.
 
 5.  **Get an Anthropic API key**
 
-    -   Sign up at [Anthropic](https://www.anthropic.com/) (if you don't have an account).
-    -   Obtain an API key from your account dashboard.
+    - Sign up at [Anthropic](https://www.anthropic.com/) (if you don't have an account).
+    - Obtain an API key from your account dashboard.
 
 6.  **Create a `.env.local` file**
 
@@ -80,80 +75,85 @@ The AI Newsletter Summarizer is a Python script designed to automatically retrie
 
 2.  **Activate the virtual environment**
 
-    If you created a virtual environment, make sure it's activated before running the script:
-
     ```bash
-    # On macOS/Linux:
-    source venv/bin/activate
-    # On Windows:
-    # venv\Scripts\activate
+    source venv/bin/activate  # On macOS/Linux
+    # venv\Scripts\activate  # On Windows
     ```
 
-3.  **Run the script**
+3.  **Run the tool**
 
-    Execute the script from your terminal:
+    **The entry point is now `main.py` (not `summ.py`)**:
 
     ```bash
-    python summ.py
+    python main.py
     ```
 
     By default, this analyzes newsletters from the past 7 days. See Command-line Options below to customize.
 
 4.  **First-time Authentication**
 
-    The *very first time* you run the script, it will open a browser window. You'll need to:
-    -   Log in to the Google account associated with the Gmail inbox you want to analyze.
-    -   Grant the script permission to **view your email messages and settings** (this is the `gmail.readonly` scope).
-    After successful authentication, the script will create a `token.json` file to store the authorization credentials, so you won't need to authenticate via the browser on subsequent runs (unless the token expires or is revoked).
+    The *very first time* you run the tool, it will open a browser window. You'll need to:
+    - Log in to the Google account associated with the Gmail inbox you want to analyze.
+    - Grant the tool permission to **view your email messages and settings** (this is the `gmail.readonly` scope).
+    After successful authentication, the tool will create a `token.json` file to store the authorization credentials, so you won't need to authenticate via the browser on subsequent runs (unless the token expires or is revoked).
 
 5.  **View the Results**
 
-    The script will output progress messages to the console. Once finished, it will generate a markdown file named `ai_newsletter_summary_YYYYMMDD_to_YYYYMMDD.md` in the project directory. The filename reflects the actual date range of the newsletters analyzed. Open this file to view your summarized report.
+    The tool will output progress messages to the console. Once finished, it will generate a markdown file named `ai_newsletter_summary_YYYYMMDD_to_YYYYMMDD.md` in the project directory. The filename reflects the actual date range of the newsletters analyzed. Open this file to view your summarized report.
 
 ## Command-line Options
 
-You can modify the script's behavior using these optional flags:
+You can modify the tool's behavior using these optional flags:
 
 -   `--days N`: Specify the number of past days to retrieve emails from.
     ```bash
-    # Analyze newsletters from the past 14 days
-    python summ.py --days 14
+    python main.py --days 14
     ```
     (Default: `7`)
 
 -   `--prioritize-recent` / `--no-prioritize-recent`: Enable or disable giving higher weight to more recent newsletters during topic extraction.
     ```bash
-    # Disable recency weighting
-    python summ.py --no-prioritize-recent
+    python main.py --no-prioritize-recent
     ```
     (Default: enabled)
 
 -   `--breaking-news-section` / `--no-breaking-news-section`: Enable or disable the separate "Just In" section in the report, which highlights headlines from the very latest newsletters (last ~24 hours).
     ```bash
-    # Disable the "Just In" section
-    python summ.py --no-breaking-news-section
+    python main.py --no-breaking-news-section
     ```
     (Default: enabled)
+
+## Modular Architecture
+
+The codebase is now organized into the following modules for clarity and maintainability:
+
+- `auth.py` — Gmail authentication
+- `fetch.py` — Email fetching
+- `nlp.py` — Topic extraction
+- `llm.py` — LLM analysis
+- `report.py` — Report generation
+- `main.py` — Entry point (run this file to use your tool)
+- `summ.py` — Now just a stub, instructing users to use `main.py`
 
 ## Customization
 
 For more advanced modifications:
 
--   To modify the number of key topics extracted, adjust the `num_topics` argument in the `extract_key_topics` function call within `main()`.
--   To change the specific LLM prompt, analysis approach, or the LLM model used (e.g., a different Claude model), edit the `analyze_with_llm` function.
--   To customize the final report format or content, modify the `generate_report` function.
--   To add more stop words for NLP processing, update the `additional_stops` set in the `extract_key_topics` function.
+-   To modify the number of key topics extracted, adjust the `num_topics` argument in the `extract_key_topics` function call within `main.py`.
+-   To change the specific LLM prompt, analysis approach, or the LLM model used (e.g., a different Claude model), edit the `analyze_with_llm` function in `llm.py`.
+-   To customize the final report format or content, modify the `generate_report` function in `report.py`.
+-   To add more stop words for NLP processing, update the `additional_stops` set in the `extract_key_topics` function in `nlp.py`.
 
 ## Troubleshooting
 
--   **NLTK Resource Errors**: If you encounter errors like `Resource punkt not found.` during the first run, the script attempts to download them automatically. If automatic download fails (e.g., due to network issues), you might need to run the following in a Python interpreter within your activated virtual environment:
+-   **NLTK Resource Errors**: If you encounter errors like `Resource punkt not found.` during the first run, the tool attempts to download them automatically. If automatic download fails (e.g., due to network issues), you might need to run the following in a Python interpreter within your activated virtual environment:
     ```python
     import nltk
     nltk.download('punkt')
     nltk.download('stopwords')
     ```
 
--   **Authentication Issues / `token.json` Errors**: If you face persistent authentication problems or errors related to `token.json`, try deleting the `token.json` file and re-running the script. This will force the authentication flow again. Ensure your `credentials.json` file is correct and hasn't been revoked in Google Cloud Console.
+-   **Authentication Issues / `token.json` Errors**: If you face persistent authentication problems or errors related to `token.json`, try deleting the `token.json` file and re-running the tool. This will force the authentication flow again. Ensure your `credentials.json` file is correct and hasn't been revoked in Google Cloud Console.
 
 -   **API Rate Limits**: Be aware that both the Gmail API and the Anthropic API have usage limits. If you process a very large number of newsletters frequently, you might encounter rate limiting. Check the respective documentation for details.
 
@@ -161,11 +161,11 @@ For more advanced modifications:
 
 ## Functional Specification
 
-This section provides a detailed breakdown of the script's internal workings.
+This section provides a detailed breakdown of the tool's internal workings.
 
 ### 1. Overview
 
-The script automates the process of retrieving, analyzing, and summarizing AI-focused newsletters from Gmail, generating a user-focused report.
+The tool automates the process of retrieving, analyzing, and summarizing AI-focused newsletters from Gmail, generating a user-focused report.
 
 ### 2. Core Functionality
 
@@ -227,7 +227,7 @@ The script automates the process of retrieving, analyzing, and summarizing AI-fo
 -   Provides guidance messages if NLTK resource downloads fail.
 -   Handles exceptions during credential loading/refreshing (`token.json`), suggesting re-authentication.
 -   Includes `try-except` blocks for potential date parsing errors.
--   Uses a main `try-except` block to catch and print general errors during script execution.
+-   Uses a main `try-except` block to catch and print general errors during tool execution.
 
 ## Acknowledgements
 
