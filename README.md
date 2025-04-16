@@ -25,7 +25,7 @@ The AI Newsletter Summarizer is a Python tool designed to automatically retrieve
 1.  **Clone the repository**
 
     ```bash
-    git clone https://github.com/yourusername/newsletter_summary.git
+    git clone https://github.com/saadiq/newsletter_summary.git
     cd newsletter_summary
     ```
 
