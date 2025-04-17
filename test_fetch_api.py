@@ -135,4 +135,42 @@ def test_get_ai_newsletters_missing_headers(monkeypatch):
     newsletters = get_ai_newsletters(service, days=1)
     assert len(newsletters) == 1
     assert newsletters[0]['subject'] == 'No Subject'
-    assert newsletters[0]['sender'] == 'Unknown Sender' 
+    assert newsletters[0]['sender'] == 'Unknown Sender'
+
+def test_get_ai_newsletters_no_label(monkeypatch):
+    # Simulate messages with different senders
+    messages_data = [
+        {'id': '1', 'subject': 'NoLabel 1', 'date': 'Mon, 1 Jan 2024 10:00:00 +0000', 'from': 'foo@example.com', 'to': 'me@example.com'},
+        {'id': '2', 'subject': 'NoLabel 2', 'date': 'Tue, 2 Jan 2024 10:00:00 +0000', 'from': 'bar@example.com', 'to': 'me@example.com'},
+    ]
+    captured_query = {}
+    class DummyMessagesNoLabel:
+        def list(self, userId, q):
+            captured_query['q'] = q
+            return MagicMock(execute=MagicMock(return_value={'messages': [{'id': m['id']} for m in messages_data]}))
+        def get(self, userId, id, format):
+            msg = next(m for m in messages_data if m['id'] == id)
+            return MagicMock(execute=MagicMock(return_value={
+                'payload': {
+                    'headers': [
+                        {'name': 'Subject', 'value': msg['subject']},
+                        {'name': 'Date', 'value': msg['date']},
+                        {'name': 'From', 'value': msg['from']},
+                        {'name': 'To', 'value': msg['to']},
+                    ],
+                    'body': {'data': b'VGVzdCBib2R5'}
+                }
+            }))
+    class DummyUsersNoLabel:
+        def messages(self):
+            return DummyMessagesNoLabel()
+    class DummyServiceNoLabel:
+        def users(self):
+            return DummyUsersNoLabel()
+    monkeypatch.setattr(fetch, 'tqdm', lambda x, **kwargs: x)
+    service = DummyServiceNoLabel()
+    newsletters = get_ai_newsletters(service, days=1, label=None)
+    assert len(newsletters) == 2
+    assert all(nl['subject'].startswith('NoLabel') for nl in newsletters)
+    # Assert that the query does not include a label filter
+    assert 'label:' not in captured_query['q'] 
