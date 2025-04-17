@@ -1,6 +1,7 @@
 import datetime
 import base64
 import re
+from tqdm import tqdm
 
 def get_ai_newsletters(service, days=7):
     """Get emails tagged with 'ai newsletter' from the past week."""
@@ -9,7 +10,7 @@ def get_ai_newsletters(service, days=7):
     result = service.users().messages().list(userId='me', q=query).execute()
     messages = result.get('messages', [])
     newsletters = []
-    for message in messages:
+    for message in tqdm(messages, desc="Fetching newsletters", unit="email"):
         msg = service.users().messages().get(userId='me', id=message['id'], format='full').execute()
         payload = msg['payload']
         headers = payload['headers']
