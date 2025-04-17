@@ -172,6 +172,24 @@ You can modify the tool's behavior using these optional flags:
     ```
     (Default: `7`)
 
+-   `--label LABEL`: Specify the Gmail label to filter newsletters (default: `ai-newsletter`).
+    ```bash
+    python main.py --label my-custom-label
+    ```
+    (Default: `ai-newsletter`)
+
+-   `--from-email EMAIL`: Only include emails from this sender email address (optional).
+    ```bash
+    python main.py --from-email sender@example.com
+    ```
+    (Optional)
+
+-   `--to-email EMAIL`: Only include emails sent to this recipient email address (optional).
+    ```bash
+    python main.py --to-email recipient@example.com
+    ```
+    (Optional)
+
 -   `--prioritize-recent` / `--no-prioritize-recent`: Enable or disable giving higher weight to more recent newsletters during topic extraction.
     ```bash
     python main.py --no-prioritize-recent

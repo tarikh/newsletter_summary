@@ -3,10 +3,15 @@ import base64
 import re
 from tqdm import tqdm
 
-def get_ai_newsletters(service, days=7):
-    """Get emails tagged with 'ai newsletter' from the past week."""
+def get_ai_newsletters(service, days=7, label='ai-newsletter', from_email=None, to_email=None):
+    """Get emails matching label, date, and optional from/to filters."""
     date_from = (datetime.datetime.now() - datetime.timedelta(days=days)).strftime('%Y/%m/%d')
-    query = f"label:ai-newsletter after:{date_from}"
+    query_parts = [f"label:{label}", f"after:{date_from}"]
+    if from_email:
+        query_parts.append(f"from:{from_email}")
+    if to_email:
+        query_parts.append(f"to:{to_email}")
+    query = ' '.join(query_parts)
     result = service.users().messages().list(userId='me', q=query).execute()
     messages = result.get('messages', [])
     newsletters = []

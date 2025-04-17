@@ -27,13 +27,25 @@ def main():
                         help='NLP technique for topic extraction: keybert (default) or classic')
     parser.add_argument('--llm-provider', choices=['claude', 'openai'], default='openai',
                         help='LLM provider for summarization: claude (Claude 3.7 Sonnet) or openai (default, GPT-4.1)')
+    parser.add_argument('--label', type=str, default='ai-newsletter',
+                        help='Gmail label to filter newsletters (default: ai-newsletter)')
+    parser.add_argument('--from-email', type=str, default=None,
+                        help='Only include emails from this sender email address (optional)')
+    parser.add_argument('--to-email', type=str, default=None,
+                        help='Only include emails sent to this recipient email address (optional)')
     parser.set_defaults(prioritize_recent=True, breaking_news_section=True)
     args = parser.parse_args()
     try:
         print("Authenticating with Gmail...")
         service = authenticate_gmail()
-        print(f"Retrieving AI newsletters from the past {args.days} days...")
-        newsletters = get_ai_newsletters(service, days=args.days)
+        print(f"Retrieving AI newsletters from the past {args.days} days... (label: {args.label})")
+        newsletters = get_ai_newsletters(
+            service,
+            days=args.days,
+            label=args.label,
+            from_email=args.from_email,
+            to_email=args.to_email
+        )
         print(f"Found {len(newsletters)} newsletters.")
         if not newsletters:
             print("No newsletters found. Check your Gmail labels or date range.")
