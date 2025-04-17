@@ -279,3 +279,54 @@ The tool automates the process of retrieving, analyzing, and summarizing AI-focu
 -   **Authentication:** Uses OAuth 2.0 via `google-auth-oauthlib` and `google-api-python-client`. Requires `credentials.json` for initial setup, stores/refreshes tokens in `token.json`. Handles token expiry and refresh.
 -   **Email Retrieval:** Queries the Gmail API using `service.users().messages().list()` with `q="label:ai-newsletter after:YYYY/MM/DD"`. Fetches full message content (`format='full'`) for matching message IDs.
 -   **Content Extraction:** Parses message payloads using the `
+
+## Testing & Developer Guide
+
+### Test Types
+
+- **Integration tests**: Simulate Gmail API responses and test core logic (see `test_fetch_api.py`).
+- **E2E/CLI tests**: Run the full CLI workflow, verify output file and content (see `test_e2e_cli.py`).
+
+### Running Tests
+
+- To run all tests:
+  ```bash
+  pytest
+  ```
+- To run a specific test file:
+  ```bash
+  pytest test_fetch_api.py
+  pytest test_e2e_cli.py
+  ```
+- To run a specific test function:
+  ```bash
+  pytest test_fetch_api.py::test_get_ai_newsletters_success
+  ```
+
+### E2E/CLI Test Environment Variables
+
+- `NEWSLETTER_SUMMARY_OUTPUT_DIR`: If set, the CLI will write the report file to this directory (used for testing and automation).
+- `NEWSLETTER_SUMMARY_MOCK_DATA`: If set (as a JSON string), the CLI will use this as the newsletter data instead of fetching from Gmail. This enables robust E2E/CLI testing.
+
+### Developer Dependencies
+
+- Developer/test dependencies are in `requirements-dev.txt` (e.g., `pytest`).
+  ```bash
+  pip install -r requirements-dev.txt
+  ```
+
+### Example: E2E/CLI Test
+
+The E2E test runs the CLI with mocked data and checks the output file:
+```python
+import subprocess, os, sys, tempfile, json
+with tempfile.TemporaryDirectory() as tmpdir:
+    env = os.environ.copy()
+    env['PYTHONPATH'] = os.getcwd()
+    env['NEWSLETTER_SUMMARY_OUTPUT_DIR'] = tmpdir
+    env['NEWSLETTER_SUMMARY_MOCK_DATA'] = json.dumps([
+        {'subject': 'Test Subject', 'date': '...', 'sender': '...', 'body': '...'}
+    ])
+    subprocess.run([sys.executable, 'main.py', '--days', '1'], env=env)
+    # Check output file in tmpdir
+```

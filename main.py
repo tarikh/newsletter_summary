@@ -10,6 +10,7 @@ from fetch import get_ai_newsletters
 from nlp import extract_key_topics_keybert, extract_key_topics
 from llm import analyze_with_llm
 from report import generate_report
+import json
 
 def main():
     parser = argparse.ArgumentParser(description='Summarize AI newsletters from Gmail.')
@@ -39,13 +40,17 @@ def main():
         print("Authenticating with Gmail...")
         service = authenticate_gmail()
         print(f"Retrieving AI newsletters from the past {args.days} days... (label: {args.label})")
-        newsletters = get_ai_newsletters(
-            service,
-            days=args.days,
-            label=args.label,
-            from_email=args.from_email,
-            to_email=args.to_email
-        )
+        mock_data_env = os.environ.get("NEWSLETTER_SUMMARY_MOCK_DATA")
+        if mock_data_env:
+            newsletters = json.loads(mock_data_env)
+        else:
+            newsletters = get_ai_newsletters(
+                service,
+                days=args.days,
+                label=args.label,
+                from_email=args.from_email,
+                to_email=args.to_email
+            )
         print(f"Found {len(newsletters)} newsletters.")
         if not newsletters:
             print("No newsletters found. Check your Gmail labels or date range.")
@@ -71,6 +76,10 @@ def main():
         else:
             report, filename_date_range = generate_report(newsletters, topics, llm_analysis, args.days)
         report_filename = f"ai_newsletter_summary_{filename_date_range}.md"
+        output_dir = os.environ.get("NEWSLETTER_SUMMARY_OUTPUT_DIR", "")
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
+            report_filename = os.path.join(output_dir, report_filename)
         with open(report_filename, 'w') as f:
             f.write(report)
         print(f"Report saved to {report_filename}")
