@@ -30,6 +30,8 @@ def main():
                         help='LLM provider for summarization: claude (Claude 3.7 Sonnet) or openai (default, GPT-4.1)')
     parser.add_argument('--label', type=str, default='ai-newsletter',
                         help='Gmail label to filter newsletters (default: ai-newsletter)')
+    parser.add_argument('--no-label', action='store_true',
+                        help='Do not use any Gmail label as a search criteria (overrides --label)')
     parser.add_argument('--from-email', type=str, default=None,
                         help='Only include emails from this sender email address (optional)')
     parser.add_argument('--to-email', type=str, default=None,
@@ -39,7 +41,8 @@ def main():
     try:
         print("Authenticating with Gmail...")
         service = authenticate_gmail()
-        print(f"Retrieving AI newsletters from the past {args.days} days... (label: {args.label})")
+        label_arg = None if args.no_label else args.label
+        print(f"Retrieving AI newsletters from the past {args.days} days... (label: {label_arg if label_arg else 'none'})")
         mock_data_env = os.environ.get("NEWSLETTER_SUMMARY_MOCK_DATA")
         if mock_data_env:
             newsletters = json.loads(mock_data_env)
@@ -47,7 +50,7 @@ def main():
             newsletters = get_ai_newsletters(
                 service,
                 days=args.days,
-                label=args.label,
+                label=label_arg,
                 from_email=args.from_email,
                 to_email=args.to_email
             )
