@@ -6,6 +6,8 @@ from nltk.tokenize import word_tokenize
 from keybert import KeyBERT
 from sentence_transformers import SentenceTransformer
 from sklearn.cluster import AgglomerativeClustering
+from tqdm import tqdm
+from yaspin import yaspin
 
 def extract_key_topics(newsletters, num_topics=5):
     """Extract key topics from newsletters using more advanced NLP techniques."""
@@ -137,12 +139,16 @@ def extract_key_topics_keybert(newsletters, num_topics=5, ngram_range=(1,3), top
     """Extract key topics using KeyBERT and semantic clustering with dynamic adjustment and fallback."""
     text = " ".join(nl['body'] + " " + nl['subject'] for nl in newsletters)
     kw_model = KeyBERT(model='all-MiniLM-L6-v2')
-    keyphrases_with_scores = kw_model.extract_keywords(
-        text,
-        keyphrase_ngram_range=ngram_range,
-        stop_words='english',
-        top_n=top_n_candidates
-    )
+    msg = "Extracting keyphrases with KeyBERT (this may take a moment)..."
+    print(msg, flush=True)
+    with yaspin(text="", color="cyan") as spinner:
+        keyphrases_with_scores = kw_model.extract_keywords(
+            text,
+            keyphrase_ngram_range=ngram_range,
+            stop_words='english',
+            top_n=top_n_candidates
+        )
+        spinner.ok("✔")
     keyphrases = [phrase for phrase, score in keyphrases_with_scores]
     if not keyphrases:
         return []
@@ -151,8 +157,12 @@ def extract_key_topics_keybert(newsletters, num_topics=5, ngram_range=(1,3), top
     n_clusters = min(num_topics, len(keyphrases))
     if n_clusters < 2:
         return keyphrases[:num_topics]
-    clustering = AgglomerativeClustering(n_clusters=n_clusters)
-    labels = clustering.fit_predict(embeddings)
+    msg = "Clustering keyphrases (this may take a moment)..."
+    print(msg, flush=True)
+    with yaspin(text="", color="cyan") as spinner:
+        clustering = AgglomerativeClustering(n_clusters=n_clusters)
+        labels = clustering.fit_predict(embeddings)
+        spinner.ok("✔")
     cluster_to_phrases = {i: [] for i in range(n_clusters)}
     for idx, label in enumerate(labels):
         cluster_to_phrases[label].append((keyphrases[idx], keyphrases_with_scores[idx][1]))

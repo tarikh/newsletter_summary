@@ -13,6 +13,8 @@ try:
     import openai
 except ImportError:
     openai = None
+from tqdm import tqdm
+from yaspin import yaspin
 
 def analyze_with_llm(newsletters, topics, provider='claude'):
     """
@@ -20,6 +22,7 @@ def analyze_with_llm(newsletters, topics, provider='claude'):
     with contextual summarization and NER/event detection.
     provider: 'claude' (default) or 'openai'
     """
+    print("Performing contextual summarization and NER for each topic (this may take a moment)...", flush=True)
     nlp = spacy.load("en_core_web_sm")
     summarizer = TextRankSummarizer()
     topic_context = {}
@@ -29,35 +32,37 @@ def analyze_with_llm(newsletters, topics, provider='claude'):
         'partner', 'partnered', 'merge', 'merged', 'invest', 'invested', 'fund', 'funded',
         'appoint', 'appointed', 'join', 'joined', 'expand', 'expanded', 'collaborate', 'collaborated'
     ]
-    for topic in topics:
-        base_topic = topic.split(' (')[0] if ' (' in topic else topic
-        related_terms = re.findall(r'\((.*?)\)', topic)[0].split(', ') if ' (' in topic else []
-        search_terms = [base_topic] + related_terms
-        # Gather all sentences relevant to the topic
-        all_sentences = []
-        all_text = ""
-        for nl in newsletters:
-            sentences = sent_tokenize(nl['body'])
-            for sentence in sentences:
-                if any(term.lower() in sentence.lower() for term in search_terms):
-                    all_sentences.append(sentence)
-                    all_text += sentence + " "
-        # Contextual summarization using TextRank
-        parser = PlaintextParser.from_string(all_text, Tokenizer("english"))
-        summary_sentences = [str(s) for s in summarizer(parser.document, 5)]
-        # NER using spaCy
-        doc = nlp(all_text)
-        entities = set([ent.text for ent in doc.ents if ent.label_ in {"ORG", "PERSON", "PRODUCT", "GPE", "EVENT"}])
-        # Event detection: sentences with event verbs
-        event_sentences = []
-        for sent in doc.sents:
-            if any(verb in sent.text.lower() for verb in event_verbs):
-                event_sentences.append(sent.text)
-        topic_context[base_topic] = {
-            "entities": list(entities)[:10],
-            "events": event_sentences[:5],
-            "snippets": summary_sentences if summary_sentences else all_sentences[:5]
-        }
+    with yaspin(text="", color="cyan") as spinner:
+        for topic in topics:
+            base_topic = topic.split(' (')[0] if ' (' in topic else topic
+            related_terms = re.findall(r'\((.*?)\)', topic)[0].split(', ') if ' (' in topic else []
+            search_terms = [base_topic] + related_terms
+            # Gather all sentences relevant to the topic
+            all_sentences = []
+            all_text = ""
+            for nl in newsletters:
+                sentences = sent_tokenize(nl['body'])
+                for sentence in sentences:
+                    if any(term.lower() in sentence.lower() for term in search_terms):
+                        all_sentences.append(sentence)
+                        all_text += sentence + " "
+            # Contextual summarization using TextRank
+            parser = PlaintextParser.from_string(all_text, Tokenizer("english"))
+            summary_sentences = [str(s) for s in summarizer(parser.document, 5)]
+            # NER using spaCy
+            doc = nlp(all_text)
+            entities = set([ent.text for ent in doc.ents if ent.label_ in {"ORG", "PERSON", "PRODUCT", "GPE", "EVENT"}])
+            # Event detection: sentences with event verbs
+            event_sentences = []
+            for sent in doc.sents:
+                if any(verb in sent.text.lower() for verb in event_verbs):
+                    event_sentences.append(sent.text)
+            topic_context[base_topic] = {
+                "entities": list(entities)[:10],
+                "events": event_sentences[:5],
+                "snippets": summary_sentences if summary_sentences else all_sentences[:5]
+            }
+        spinner.ok("✔")
     from email.utils import parsedate_to_datetime
     newsletter_with_dates = []
     for i, nl in enumerate(newsletters):
