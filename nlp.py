@@ -20,7 +20,7 @@ def is_layout_topic(topic):
     words = set(topic.lower().split())
     return any(word in LAYOUT_STOPWORDS for word in words)
 
-def clean_body(html):
+def clean_body(html, body_format=None):
     try:
         print("INPUT HTML (truncated):", html[:500])
         soup = BeautifulSoup(html, "html.parser")
