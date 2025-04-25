@@ -22,7 +22,6 @@ def is_layout_topic(topic):
 
 def clean_body(html, body_format=None):
     try:
-        print("INPUT HTML (truncated):", html[:500])
         soup = BeautifulSoup(html, "html.parser")
         for tag in soup(['style', 'script', 'meta', 'link']):
             tag.decompose()
@@ -33,10 +32,8 @@ def clean_body(html, body_format=None):
         cleaned_html = re.sub(r'(?s)\.[\w\-]+[^{]*{[^}]+}', '', cleaned_html)
         cleaned_html = re.sub(r'(?s){[^}]+}', '', cleaned_html)
         markdown = convert_to_markdown(cleaned_html, heading_style="atx")
-        print("MARKDOWN OUTPUT (truncated):", markdown[:500])
         return markdown
     except Exception as e:
-        print("ERROR in clean_body:", e)
         return "[ERROR: Could not clean/convert this email]"
 
 def extract_key_topics(newsletters, num_topics=5):
