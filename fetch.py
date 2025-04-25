@@ -25,21 +25,29 @@ def get_ai_newsletters(service, days=7, label='ai-newsletter', from_email=None, 
         date = next((header['value'] for header in headers if header['name'] == 'Date'), 'No Date')
         sender = next((header['value'] for header in headers if header['name'] == 'From'), 'Unknown Sender')
         body = ""
+        body_format = None
         if 'parts' in payload:
+            html_body = None
+            text_body = None
             for part in payload['parts']:
-                if part['mimeType'] == 'text/plain':
-                    body = base64.urlsafe_b64decode(part['body']['data']).decode('utf-8')
-                    break
-                elif part['mimeType'] == 'text/html':
-                    html = base64.urlsafe_b64decode(part['body']['data']).decode('utf-8')
-                    body = re.sub('<[^<]+?>', ' ', html)
-                    break
+                if part['mimeType'] == 'text/html':
+                    html_body = base64.urlsafe_b64decode(part['body']['data']).decode('utf-8')
+                elif part['mimeType'] == 'text/plain':
+                    text_body = base64.urlsafe_b64decode(part['body']['data']).decode('utf-8')
+            if html_body is not None:
+                body = html_body
+                body_format = 'html'
+            elif text_body is not None:
+                body = text_body
+                body_format = 'plain'
         elif 'body' in payload and 'data' in payload['body']:
             body = base64.urlsafe_b64decode(payload['body']['data']).decode('utf-8')
+            body_format = 'plain'
         newsletters.append({
             'subject': subject,
             'date': date,
             'sender': sender,
-            'body': body
+            'body': body,
+            'body_format': body_format
         })
     return newsletters 

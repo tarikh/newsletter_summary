@@ -15,6 +15,7 @@ except ImportError:
     openai = None
 from tqdm import tqdm
 from yaspin import yaspin
+from nlp import clean_body
 
 def analyze_with_llm(newsletters, topics, provider='claude'):
     """
@@ -41,7 +42,8 @@ def analyze_with_llm(newsletters, topics, provider='claude'):
             all_sentences = []
             all_text = ""
             for nl in newsletters:
-                sentences = sent_tokenize(nl['body'])
+                cleaned_body = clean_body(nl['body'], nl.get('body_format'))
+                sentences = sent_tokenize(cleaned_body)
                 for sentence in sentences:
                     if any(term.lower() in sentence.lower() for term in search_terms):
                         all_sentences.append(sentence)
@@ -82,7 +84,7 @@ def analyze_with_llm(newsletters, topics, provider='claude'):
     recent_developments = []
     for nl in recent_newsletters:
         subject = nl['subject'].lower()
-        body_first_para = ' '.join(sent_tokenize(nl['body'])[:5])
+        body_first_para = ' '.join(sent_tokenize(clean_body(nl['body'], nl.get('body_format')))[:5])
         if any(indicator in subject.lower() for indicator in breaking_news_indicators):
             recent_developments.append({
                 'subject': nl['subject'],

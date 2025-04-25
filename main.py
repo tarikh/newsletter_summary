@@ -7,7 +7,7 @@ load_dotenv('.env.local')
 import argparse
 from auth import authenticate_gmail
 from fetch import get_ai_newsletters
-from nlp import extract_key_topics_keybert, extract_key_topics
+from nlp import extract_key_topics_keybert, extract_key_topics, clean_body
 from llm import analyze_with_llm
 from report import generate_report
 import json
@@ -36,6 +36,8 @@ def main():
                         help='Only include emails from this sender email address (optional)')
     parser.add_argument('--to-email', type=str, default=None,
                         help='Only include emails sent to this recipient email address (optional)')
+    parser.add_argument('--debug-key-topics', action='store_true',
+                        help='Debug mode: only extract and display key topics and the cleaned text used for topic extraction')
     parser.set_defaults(prioritize_recent=True, breaking_news_section=True)
     args = parser.parse_args()
     try:
@@ -57,6 +59,17 @@ def main():
         print(f"Found {len(newsletters)} newsletters.")
         if not newsletters:
             print("No newsletters found. Check your Gmail labels or date range.")
+            return
+        if args.debug_key_topics:
+            print("\n--- DEBUG: Cleaned text used for topic extraction ---\n")
+            cleaned_text = "\n\n".join([clean_body(nl['body'], nl.get('body_format')) + "\n" + nl['subject'] for nl in newsletters])
+            print(cleaned_text)
+            print("\n--- DEBUG: Key topics identified ---\n")
+            if args.nlp_method == 'keybert':
+                topics = extract_key_topics_keybert(newsletters)
+            else:
+                topics = extract_key_topics(newsletters)
+            print(f"Identified {len(topics)} key topics: {', '.join(topics)}")
             return
         print("Extracting key topics...")
         if args.nlp_method == 'keybert':

@@ -8,6 +8,36 @@ from sentence_transformers import SentenceTransformer
 from sklearn.cluster import AgglomerativeClustering
 from tqdm import tqdm
 from yaspin import yaspin
+import datetime
+from bs4 import BeautifulSoup
+from html_to_markdown import convert_to_markdown
+
+LAYOUT_STOPWORDS = {
+    'table', 'body', 'img', 'icon', 'h6', 'h1', 'h2', 'h3', 'h4', 'h5', 'div', 'span', 'header', 'footer', 'section', 'article', 'main', 'aside', 'nav', 'ul', 'li', 'ol', 'tr', 'td', 'th', 'thead', 'tbody', 'tfoot', 'responsive', 'container', 'row', 'col', 'cell', 'content', 'block', 'wrapper', 'panel', 'title', 'link', 'caption', 'figure', 'figcaption', 'hr', 'br', 'input', 'form', 'label', 'button', 'select', 'option', 'textarea', 'fieldset', 'legend', 'menu', 'item', 'list', 'card', 'media', 'meta', 'footer', 'sidebar', 'widget', 'banner', 'ad', 'promo', 'newsletter', 'subscribe', 'unsubscribe', 'view', 'online', 'email', 'address', 'logo', 'avatar', 'profile', 'author', 'date', 'time', 'read', 'more', 'click', 'here', 'update', 'preferences', 'privacy', 'policy', 'terms', 'service', 'copyright', 'minute', 'minutes', 'hour', 'hours', 'second', 'seconds', 'image', 'photo', 'picture', 'thumbnail', 'gif', 'alt', 'alt text', 'view image', 'image caption', 'caption', 'view', 'view online', 'view in browser', 'browser', 'web', 'site', 'website', 'unsubscribe', 'update', 'preferences', 'profile', 'contact', 'privacy', 'policy', 'terms', 'service', 'copyright', 'minute', 'minutes', 'hour', 'hours', 'second', 'seconds', 'like', 'such', 'similar', 'compared', 'example'
+}
+
+def is_layout_topic(topic):
+    words = set(topic.lower().split())
+    return any(word in LAYOUT_STOPWORDS for word in words)
+
+def clean_body(html):
+    try:
+        print("INPUT HTML (truncated):", html[:500])
+        soup = BeautifulSoup(html, "html.parser")
+        for tag in soup(['style', 'script', 'meta', 'link']):
+            tag.decompose()
+        for tag in soup.find_all(True):
+            tag.attrs = {}
+        cleaned_html = str(soup)
+        cleaned_html = re.sub(r'(?s)@media[^{]+{[^}]+}', '', cleaned_html)
+        cleaned_html = re.sub(r'(?s)\.[\w\-]+[^{]*{[^}]+}', '', cleaned_html)
+        cleaned_html = re.sub(r'(?s){[^}]+}', '', cleaned_html)
+        markdown = convert_to_markdown(cleaned_html, heading_style="atx")
+        print("MARKDOWN OUTPUT (truncated):", markdown[:500])
+        return markdown
+    except Exception as e:
+        print("ERROR in clean_body:", e)
+        return "[ERROR: Could not clean/convert this email]"
 
 def extract_key_topics(newsletters, num_topics=5):
     """Extract key topics from newsletters using more advanced NLP techniques."""
@@ -43,7 +73,7 @@ def extract_key_topics(newsletters, num_topics=5):
     for i, nl in enumerate(newsletters):
         weight = recency_weights[i]
         content_weight = max(1, int(weight))
-        all_text += " ".join([nl['body']] * content_weight) + " "
+        all_text += " ".join([clean_body(nl['body'])] * content_weight) + " "
         subjects_text += " ".join([nl['subject']] * content_weight) + " "
     weighted_subjects = " ".join([subjects_text] * 5)
     combined_text = all_text + " " + weighted_subjects
@@ -133,11 +163,13 @@ def extract_key_topics(newsletters, num_topics=5):
     if len(final_topics) < num_topics:
         remaining_topics = [t for t, _ in candidate_topics if t not in ' '.join(final_topics)]
         final_topics.extend(remaining_topics[:num_topics - len(final_topics)])
-    return final_topics[:num_topics]
+    # Filter out layout-related topics
+    filtered_topics = [t for t in final_topics if not is_layout_topic(t)]
+    return filtered_topics[:num_topics]
 
 def extract_key_topics_keybert(newsletters, num_topics=5, ngram_range=(1,3), top_n_candidates=30):
     """Extract key topics using KeyBERT and semantic clustering with dynamic adjustment and fallback."""
-    text = " ".join(nl['body'] + " " + nl['subject'] for nl in newsletters)
+    text = " ".join(clean_body(nl['body']) + " " + nl['subject'] for nl in newsletters)
     kw_model = KeyBERT(model='all-MiniLM-L6-v2')
     msg = "Extracting keyphrases with KeyBERT (this may take a moment)..."
     print(msg, flush=True)
@@ -191,4 +223,6 @@ def extract_key_topics_keybert(newsletters, num_topics=5, ngram_range=(1,3), top
                 topics.append(topic)
             if len(topics) >= num_topics:
                 break
-    return topics[:num_topics] 
+    # Filter out layout-related topics
+    filtered_topics = [t for t in topics if not is_layout_topic(t)]
+    return filtered_topics[:num_topics] 
