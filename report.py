@@ -23,12 +23,12 @@ def generate_report(newsletters, topics, llm_analysis, days):
         latest_date = max(newsletter_dates)
         run_time = datetime.datetime.now()
         date_range = f"## {earliest_date.strftime('%B %d')} to {latest_date.strftime('%B %d, %Y, %H:%M')} (summary run at {run_time.strftime('%Y-%m-%d %H:%M')})"
-        filename_date_range = f"{earliest_date.strftime('%Y%m%d')}_to_{run_time.strftime('%Y%m%d_%H%M')}"
+        filename_date_range = f"{run_time.strftime('%Y%m%d_%H%M')}_from_{earliest_date.strftime('%Y%m%d')}"
     else:
         earliest_date = datetime.datetime.now() - datetime.timedelta(days=days)
         run_time = datetime.datetime.now()
         date_range = f"## Week of {earliest_date.strftime('%B %d')} to {run_time.strftime('%B %d, %Y, %H:%M')} (summary run at {run_time.strftime('%Y-%m-%d %H:%M')})"
-        filename_date_range = f"{earliest_date.strftime('%Y%m%d')}_to_{run_time.strftime('%Y%m%d_%H%M')}"
+        filename_date_range = f"{run_time.strftime('%Y%m%d_%H%M')}_from_{earliest_date.strftime('%Y%m%d')}"
     very_recent_newsletters = []
     cutoff_date = latest_date - datetime.timedelta(days=1)
     for i, nl, date_obj in newsletter_with_dates:
