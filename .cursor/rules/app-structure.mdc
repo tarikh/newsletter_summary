@@ -1,0 +1,22 @@
+---
+description: Application structure including modules and tests
+globs: 
+alwaysApply: false
+---
+# App Structure Overview
+
+The main entry point is [main.py](mdc:main.py), which orchestrates the workflow for summarizing AI newsletters. The codebase is modularized as follows:
+
+- [auth.py](mdc:auth.py): Handles Gmail OAuth authentication and token management.
+- [fetch.py](mdc:fetch.py): Fetches and parses emails from Gmail, applying filters and extracting relevant fields.
+- [nlp.py](mdc:nlp.py): Cleans email bodies and extracts key topics using classic n-gram or KeyBERT+clustering methods.
+- [llm.py](mdc:llm.py): Performs contextual summarization, NER/event detection, and prompts an LLM (OpenAI or Anthropic) for actionable summaries.
+- [report.py](mdc:report.py): Generates the final markdown report, including top developments, sources, and methodology. Handles newsletter website mapping and caching.
+- [review_newsletter_websites.py](mdc:review_newsletter_websites.py): CLI tool for reviewing and verifying newsletter website mappings in the cache.
+
+## Testing
+
+- [test_fetch_api.py](mdc:test_fetch_api.py): Unit tests for email fetching and parsing logic.
+- [test_e2e_cli.py](mdc:test_e2e_cli.py): End-to-end tests for the CLI workflow and report generation.
+
+Supporting files include [requirements.txt](mdc:requirements.txt), [requirements-dev.txt](mdc:requirements-dev.txt), [newsletter_websites.json](mdc:newsletter_websites.json) (website cache), and configuration files for environment variables and tokens.

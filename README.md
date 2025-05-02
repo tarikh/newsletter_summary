@@ -98,10 +98,11 @@ The tool caches detected newsletter websites for each source and marks them as *
 
 6.  **Create a `.env.local` file**
 
-    Create a file named `.env.local` in the project directory and add your Anthropic API key:
+    Create a file named `.env.local` in the project directory and add your API keys:
 
     ```dotenv
     ANTHROPIC_API_KEY=your_anthropic_api_key_here
+    OPENAI_API_KEY=your_openai_api_key_here
     ```
     *(Note: Ensure this file is included in your `.gitignore` if you plan to commit the code)*
 
@@ -161,6 +162,22 @@ The tool caches detected newsletter websites for each source and marks them as *
     - Key event sentences (launches, announcements, etc.)
     - Contextual snippets (summarized sentences)
     - All of this is provided to the LLM for more informative and actionable summaries.
+
+### Custom Output Directory
+
+To save reports to a custom directory, set the `NEWSLETTER_SUMMARY_OUTPUT_DIR` environment variable:
+
+```bash
+export NEWSLETTER_SUMMARY_OUTPUT_DIR=/path/to/output
+```
+
+### Mock Data for Testing
+
+For development or testing, you can inject mock newsletter data by setting the `NEWSLETTER_SUMMARY_MOCK_DATA` environment variable to a JSON array of newsletter objects. This will bypass Gmail fetching:
+
+```bash
+export NEWSLETTER_SUMMARY_MOCK_DATA='[{"subject": "Test Subject", "date": "2024-01-01", "sender": "sender@example.com", "body": "Test body."}]'
+```
 
 ## Command-line Options
 
@@ -261,3 +278,14 @@ For more advanced modifications:
     ```
 -   **spaCy Model Not Found**: If you see an error about `en_core_web_sm` not found, run:
     ```
+
+## Testing
+
+- `test_fetch_api.py`: Unit tests for email fetching and parsing logic.
+- `test_e2e_cli.py`: End-to-end tests for the CLI workflow and report generation.
+
+To run all tests:
+
+```bash
+pytest
+```
