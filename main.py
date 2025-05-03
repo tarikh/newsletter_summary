@@ -10,6 +10,7 @@ from fetch import get_ai_newsletters
 from nlp import extract_key_topics_keybert, extract_key_topics, clean_body
 from llm import analyze_with_llm
 from report import generate_report
+from interactive import present_and_select_topics
 import json
 
 def main():
@@ -38,6 +39,8 @@ def main():
                         help='Only include emails sent to this recipient email address (optional)')
     parser.add_argument('--debug-key-topics', action='store_true',
                         help='Debug mode: only extract and display key topics and the cleaned text used for topic extraction')
+    parser.add_argument('--interactive', '-i', action='store_true',
+                        help='Enable interactive mode to review and select topics before summarization')
     parser.set_defaults(prioritize_recent=True, breaking_news_section=True)
     args = parser.parse_args()
     try:
@@ -71,14 +74,48 @@ def main():
                 topics = extract_key_topics(newsletters)
             print(f"Identified {len(topics)} key topics: {', '.join(topics)}")
             return
+        
+        # Set number of topics based on mode
+        default_num_topics = 5
+        interactive_num_topics = 10
+        
         print("Extracting key topics...")
         if args.nlp_method == 'keybert':
             print("  - Using KeyBERT + semantic clustering")
-            topics = extract_key_topics_keybert(newsletters)
+            if args.interactive:
+                print(f"  - Identifying top {interactive_num_topics} topics for selection")
+                topics_with_scores = extract_key_topics_keybert(newsletters, num_topics=interactive_num_topics, return_scores=True)
+                
+                # Ensure we display at least 5 topics or all if fewer than that
+                if len(topics_with_scores) < default_num_topics:
+                    print(f"Warning: Only found {len(topics_with_scores)} topics")
+                
+                topics = present_and_select_topics(topics_with_scores, newsletters)
+            else:
+                topics = extract_key_topics_keybert(newsletters, num_topics=default_num_topics)
+                # Limit to default_num_topics if we got more
+                topics = topics[:default_num_topics]
         else:
             print("  - Using classic n-gram frequency method")
-            topics = extract_key_topics(newsletters)
-        print(f"Identified {len(topics)} key topics: {', '.join(topics)}")
+            if args.interactive:
+                print(f"  - Identifying top {interactive_num_topics} topics for selection")
+                topics_with_scores = extract_key_topics(newsletters, num_topics=interactive_num_topics, return_scores=True)
+                
+                # Ensure we display at least 5 topics or all if fewer than that
+                if len(topics_with_scores) < default_num_topics:
+                    print(f"Warning: Only found {len(topics_with_scores)} topics")
+                
+                topics = present_and_select_topics(topics_with_scores, newsletters)
+            else:
+                topics = extract_key_topics(newsletters, num_topics=default_num_topics)
+                # Limit to default_num_topics if we got more
+                topics = topics[:default_num_topics]
+        
+        if not topics:
+            print("Error: No topics could be extracted. Please try a different date range or method.")
+            return
+            
+        print(f"Using topics: {', '.join(topics)}")
         print("Analyzing newsletter content...")
         llm_analysis = analyze_with_llm(newsletters, topics, provider=args.llm_provider)
         print("Generating report...")

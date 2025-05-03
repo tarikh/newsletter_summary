@@ -145,6 +145,14 @@ The tool caches detected newsletter websites for each source and marks them as *
     ```bash
     python main.py --llm-provider openai
     ```
+    **Example: Enable interactive topic selection:**
+    ```bash
+    python main.py --interactive
+    ```
+    or
+    ```bash
+    python main.py -i
+    ```
 
 4.  **First-time Authentication**
 
@@ -233,6 +241,16 @@ You can modify the tool's behavior using these optional flags:
 
 -   `--llm-provider`, choices: `claude`, `openai` (default: `openai`): Choose the LLM provider for summarization. `openai` (default) uses OpenAI GPT-4.1, `claude` uses Claude 3.7 Sonnet.
 
+-   `--interactive`, `-i`: Enable interactive mode to review and select topics before summarization. This allows you to choose which auto-identified topics to include in your summary.
+    ```bash
+    python main.py --interactive
+    ```
+    or
+    ```bash
+    python main.py -i
+    ```
+    (Default: disabled)
+
 -   `-h` / `--help`: Show all available command-line options and usage examples.
 
 ## NLP Topic Extraction Methods
@@ -246,6 +264,37 @@ You can modify the tool's behavior using these optional flags:
 - **Classic n-gram Frequency:**
   - Uses frequency analysis of n-grams and subject lines to extract topics.
 
+## Interactive Topic Selection
+
+You can enable interactive mode to review and select topics before generating the summary:
+
+```bash
+python main.py --interactive
+```
+
+In interactive mode:
+- You'll see up to 10 identified topics sorted by relevance score (higher scores indicate more relevant topics)
+- Each topic is shown with an example sentence from the newsletters for context
+- The top 5 highest-scoring topics are pre-selected by default
+- You can add or remove topics from your selection using simple commands
+- Only after confirming your selection will the summary be generated
+
+This gives you more control over which topics are covered in your summary and helps you focus on what's most relevant to you.
+
+### How Topic Selection Works
+
+- **Interactive Mode**: Shows up to 10 topics sorted by relevance score (highest first)
+- **Non-Interactive Mode**: Automatically selects the top 5 highest-scoring topics for summarization
+- **Score Meaning**: Higher scores indicate topics that appear more frequently and prominently in your newsletters
+- **Context Examples**: Each topic is shown with a cleaned, relevant example from your newsletters
+- **Topic Filtering**: The system automatically filters out newsletter metadata, account-related topics, and layout-related content
+
+You can combine this with other options, for example:
+
+```bash
+python main.py --interactive --days 14 --llm-provider claude
+```
+
 ## Modular Architecture
 
 The codebase is now organized into the following modules for clarity and maintainability:
@@ -253,6 +302,7 @@ The codebase is now organized into the following modules for clarity and maintai
 - `auth.py` — Gmail authentication
 - `fetch.py` — Email fetching
 - `nlp.py` — Topic extraction
+- `interactive.py` — Interactive topic selection
 - `llm.py` — LLM analysis
 - `report.py` — Report generation
 - `main.py` — Entry point (run this file to use your tool)
