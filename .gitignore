@@ -19,6 +19,8 @@ ai_newsletter_summary_*.html
 # Implementation plans
 plan_*.md
 
+openrouter_costs.json
+
 # Python
 __pycache__/
 *.py[cod]
