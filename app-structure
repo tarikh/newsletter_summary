@@ -4,9 +4,8 @@ The main entry point is [main.py](mdc:main.py), which orchestrates the workflow 
 
 - [auth.py](mdc:auth.py): Handles Gmail OAuth authentication and token management.
 - [fetch.py](mdc:fetch.py): Fetches and parses emails from Gmail, applying filters and extracting relevant fields.
-- [nlp.py](mdc:nlp.py): Cleans email bodies and extracts key topics using classic n-gram or KeyBERT+clustering methods. Returns topics sorted by relevance score (higher is better).
-- [interactive.py](mdc:interactive.py): Implements interactive topic selection, displaying up to 10 topics with scores and relevant context examples, allowing users to select which ones to include in the summary.
-- [llm.py](mdc:llm.py): Performs contextual summarization, NER/event detection, and prompts an LLM (OpenAI or Anthropic) for actionable summaries.
+- [nlp.py](mdc:nlp.py): Cleans email bodies and extracts key topics using classic n-gram or KeyBERT+clustering methods. Returns topics sorted by relevance score (higher is better). Also includes direct-LLM topic extraction.
+- [llm.py](mdc:llm.py): Performs contextual summarization, NER/event detection, and prompts an LLM (OpenAI or Anthropic) for actionable summaries. Supports both traditional and unified direct-LLM approaches.
 - [report.py](mdc:report.py): Generates the final markdown report, including top developments, sources, and methodology. Handles newsletter website mapping and caching.
 - [review_newsletter_websites.py](mdc:review_newsletter_websites.py): CLI tool for reviewing and verifying newsletter website mappings in the cache.
 

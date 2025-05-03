@@ -80,8 +80,9 @@ def clean_body(html, body_format=None):
     except Exception as e:
         return "[ERROR: Could not clean/convert this email]"
 
-def extract_key_topics(newsletters, num_topics=5, return_scores=False):
-    """Extract key topics from newsletters using more advanced NLP techniques."""
+def extract_key_topics(newsletters, num_topics=10, return_scores=False):
+    """Extract key topics from newsletters using more advanced NLP techniques.
+    Now supports up to 10 topics by default."""
     newsletter_dates = []
     from email.utils import parsedate_to_datetime
     newsletter_with_dates = []
@@ -223,8 +224,9 @@ def extract_key_topics(newsletters, num_topics=5, return_scores=False):
     else:
         return filtered_topics[:num_topics]
 
-def extract_key_topics_keybert(newsletters, num_topics=5, ngram_range=(1,3), top_n_candidates=30, return_scores=False):
-    """Extract key topics using KeyBERT and semantic clustering with dynamic adjustment and fallback."""
+def extract_key_topics_keybert(newsletters, num_topics=10, ngram_range=(1,3), top_n_candidates=50, return_scores=False):
+    """Extract key topics using KeyBERT and semantic clustering with dynamic adjustment and fallback.
+    Now supports up to 10 topics by default."""
     text = " ".join(clean_body(nl['body']) + " " + nl['subject'] for nl in newsletters)
     kw_model = KeyBERT(model='all-MiniLM-L6-v2')
     msg = "Extracting keyphrases with KeyBERT (this may take a moment)..."
@@ -354,6 +356,16 @@ def extract_key_topics_keybert(newsletters, num_topics=5, ngram_range=(1,3), top
         return topics_with_scores
     else:
         return topics
+
+def extract_key_topics_direct_llm(newsletters, num_topics=10, provider='openai'):
+    """Extract topics directly using an LLM without NLP preprocessing."""
+    from llm import analyze_newsletters_unified
+    
+    # Get analysis and topic titles
+    _, topic_titles = analyze_newsletters_unified(newsletters, num_topics, provider)
+    
+    # Return just the topic titles for compatibility with existing code
+    return topic_titles
 
 def find_representative_sentences(topic, newsletters, max_sentences=3):
     """Find the most representative sentences for a given topic."""

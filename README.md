@@ -10,9 +10,10 @@ The AI Newsletter Summarizer is a Python tool designed to automatically retrieve
 - **Contextual Summarization & NER:** For each topic, extracts key entities (ORG, PERSON, PRODUCT, etc.), event-related sentences, and context snippets using spaCy and sumy, and provides these to the LLM for richer, more actionable summaries
 - Prioritizes recent content and breaking news (configurable)
 - Uses Anthropic's Claude AI or OpenAI's GPT-4.1 to generate summaries focused on practical applications and real-world impact (OpenAI is now the default)
-- Outputs a markdown report with the top 5 AI developments, why they matter, and actionable insights
+- Outputs a markdown report with the top AI developments, why they matter, and actionable insights
 - Includes links to newsletter sources and a brief methodology section
 - **Modular codebase**: Authentication, fetching, NLP, LLM analysis, and reporting are now in separate modules for easier maintenance and extension
+- **Two approaches available**: Traditional NLP-based topic extraction + LLM analysis, or a streamlined direct-to-LLM approach
 
 ## Newsletter Website Cache & Review Workflow
 
@@ -145,13 +146,13 @@ The tool caches detected newsletter websites for each source and marks them as *
     ```bash
     python main.py --llm-provider openai
     ```
-    **Example: Enable interactive topic selection:**
+    **Example: Use the direct-to-LLM approach:**
     ```bash
-    python main.py --interactive
+    python main.py --direct-llm
     ```
-    or
+    **Example: Specify the number of topics to extract and analyze:**
     ```bash
-    python main.py -i
+    python main.py --num-topics 7
     ```
 
 4.  **First-time Authentication**
@@ -241,13 +242,15 @@ You can modify the tool's behavior using these optional flags:
 
 -   `--llm-provider`, choices: `claude`, `openai` (default: `openai`): Choose the LLM provider for summarization. `openai` (default) uses OpenAI GPT-4.1, `claude` uses Claude 3.7 Sonnet.
 
--   `--interactive`, `-i`: Enable interactive mode to review and select topics before summarization. This allows you to choose which auto-identified topics to include in your summary.
+-   `--num-topics N`: Specify the number of topics to extract and summarize.
     ```bash
-    python main.py --interactive
+    python main.py --num-topics 8
     ```
-    or
+    (Default: `10`)
+
+-   `--direct-llm`: Use direct-to-LLM approach for both topic extraction and summarization.
     ```bash
-    python main.py -i
+    python main.py --direct-llm
     ```
     (Default: disabled)
 
@@ -264,36 +267,22 @@ You can modify the tool's behavior using these optional flags:
 - **Classic n-gram Frequency:**
   - Uses frequency analysis of n-grams and subject lines to extract topics.
 
-## Interactive Topic Selection
+## Approaches
 
-You can enable interactive mode to review and select topics before generating the summary:
+The tool offers two distinct approaches to generating summaries:
 
-```bash
-python main.py --interactive
-```
+### 1. Traditional NLP + LLM Approach (Default)
+- First extracts topics using either KeyBERT or classic n-gram frequency methods
+- Then provides these topics to the LLM for analysis and summarization
+- More control over topic selection but requires two processing stages
 
-In interactive mode:
-- You'll see up to 10 identified topics sorted by relevance score (higher scores indicate more relevant topics)
-- Each topic is shown with an example sentence from the newsletters for context
-- The top 5 highest-scoring topics are pre-selected by default
-- You can add or remove topics from your selection using simple commands
-- Only after confirming your selection will the summary be generated
+### 2. Direct-to-LLM Approach
+- Sends newsletter content directly to the LLM
+- LLM identifies topics and generates summaries in a single step
+- Streamlined process with potentially more coherent topics
+- Enable with the `--direct-llm` flag
 
-This gives you more control over which topics are covered in your summary and helps you focus on what's most relevant to you.
-
-### How Topic Selection Works
-
-- **Interactive Mode**: Shows up to 10 topics sorted by relevance score (highest first)
-- **Non-Interactive Mode**: Automatically selects the top 5 highest-scoring topics for summarization
-- **Score Meaning**: Higher scores indicate topics that appear more frequently and prominently in your newsletters
-- **Context Examples**: Each topic is shown with a cleaned, relevant example from your newsletters
-- **Topic Filtering**: The system automatically filters out newsletter metadata, account-related topics, and layout-related content
-
-You can combine this with other options, for example:
-
-```bash
-python main.py --interactive --days 14 --llm-provider claude
-```
+Both approaches support customizing the number of topics (default: 10) and choosing between OpenAI and Claude as the LLM provider.
 
 ## Modular Architecture
 
@@ -301,9 +290,8 @@ The codebase is now organized into the following modules for clarity and maintai
 
 - `auth.py` — Gmail authentication
 - `fetch.py` — Email fetching
-- `nlp.py` — Topic extraction
-- `interactive.py` — Interactive topic selection
-- `llm.py` — LLM analysis
+- `nlp.py` — Topic extraction (includes traditional and direct-LLM methods)
+- `llm.py` — LLM analysis (both unified and sequential approaches)
 - `report.py` — Report generation
 - `main.py` — Entry point (run this file to use your tool)
 - `summ.py` — Now just a stub, instructing users to use `main.py`

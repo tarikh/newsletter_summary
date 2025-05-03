@@ -17,6 +17,98 @@ from tqdm import tqdm
 from yaspin import yaspin
 from nlp import clean_body
 
+def analyze_newsletters_unified(newsletters, num_topics=10, provider='openai'):
+    """
+    Process newsletters in a single step - identifying topics and generating summaries.
+    
+    Args:
+        newsletters: List of newsletter dictionaries
+        num_topics: Number of topics to identify and summarize (default: 10)
+        provider: 'openai' or 'claude'
+        
+    Returns:
+        Tuple of (analysis_text, extracted_topic_titles)
+    """
+    # Prepare newsletter content
+    content_parts = []
+    
+    for i, nl in enumerate(newsletters, 1):
+        clean_content = clean_body(nl['body'], nl.get('body_format'))
+        
+        # Add structured newsletter entry with metadata
+        content_parts.append(
+            f"NEWSLETTER #{i}\n"
+            f"SUBJECT: {nl['subject']}\n"
+            f"SENDER: {nl['sender']}\n"
+            f"DATE: {nl['date']}\n"
+            f"CONTENT:\n{clean_content[:3000]}...\n\n"  # Truncate to manage token usage
+        )
+    
+    newsletter_content = "\n".join(content_parts)
+    
+    # Build comprehensive prompt
+    prompt = f"""
+Analyze these AI newsletters and identify the {num_topics} most significant and distinct topics.
+
+For each topic:
+1. Create a clear, concise headline
+2. Provide "What's New" - a brief description of the development
+3. Explain "Why It Matters" for regular people in their daily lives
+4. Suggest "Practical Impact" with 2-3 specific actions people can take
+
+Format your response with markdown:
+
+### 1. [Topic Headline]
+**What's New:** [Brief description of the development]
+**Why It Matters:** [Explanation for regular users]
+**Practical Impact:** [2-3 specific actions or opportunities]
+
+### 2. [Next Topic]
+...and so on
+
+GUIDELINES:
+- Identify exactly {num_topics} topics unless there aren't enough distinct topics in the content
+- Sort topics by importance (most important first)
+- Focus on substantive developments, not newsletter metadata or advertisements
+- Ensure topics are distinct from each other (avoid multiple topics about the same subject)
+- Prioritize recent developments, major product launches, policy changes, or significant research
+- Focus on topics relevant to regular people, not just AI researchers or specialists
+- "Why It Matters" should explain real-world implications, not just industry impact
+- "Practical Impact" must be truly actionable - what can regular people DO with this information?
+
+NEWSLETTER CONTENT:
+{newsletter_content}
+"""
+    
+    # Call the appropriate LLM
+    analysis_text = ""
+    if provider == 'openai':
+        client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
+        response = client.chat.completions.create(
+            model="gpt-4.1-2025-04-14",
+            messages=[
+                {"role": "system", "content": "You are an AI consultant helping summarize AI newsletter content for regular people."},
+                {"role": "user", "content": prompt}
+            ]
+        )
+        analysis_text = response.choices[0].message.content
+    else:
+        anthropic_client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY"))
+        response = anthropic_client.messages.create(
+            model="claude-3-7-sonnet-20250219",
+            max_tokens=3000,
+            system="You are an AI consultant helping summarize AI newsletter content for regular people.",
+            messages=[
+                {"role": "user", "content": prompt}
+            ]
+        )
+        analysis_text = response.content[0].text
+    
+    # Extract topic titles from the analysis for report metadata
+    topic_titles = re.findall(r'###\s*\d+\.\s*(.*?)\n', analysis_text)
+    
+    return analysis_text, topic_titles
+
 def analyze_with_llm(newsletters, topics, provider='claude'):
     """
     Use an LLM (Anthropic Claude 3.7 Sonnet or OpenAI GPT-4.1) to provide deeper insights about key topics,
