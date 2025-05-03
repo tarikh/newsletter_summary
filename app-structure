@@ -4,14 +4,32 @@ The main entry point is [main.py](mdc:main.py), which orchestrates the workflow 
 
 - [auth.py](mdc:auth.py): Handles Gmail OAuth authentication and token management.
 - [fetch.py](mdc:fetch.py): Fetches and parses emails from Gmail, applying filters and extracting relevant fields.
-- [nlp.py](mdc:nlp.py): Cleans email bodies and extracts key topics using classic n-gram or KeyBERT+clustering methods. Returns topics sorted by relevance score (higher is better). Also includes direct-LLM topic extraction.
-- [llm.py](mdc:llm.py): Performs contextual summarization, NER/event detection, and prompts an LLM (OpenAI or Anthropic) for actionable summaries. Supports both traditional and unified direct-LLM approaches.
+- [nlp.py](mdc:nlp.py): Cleans email bodies and extracts key topics using classic n-gram or KeyBERT+clustering methods. Returns topics sorted by relevance score (higher is better). Includes filtering to exclude newsletter metadata and non-content topics. Also includes direct-LLM topic extraction via a delegate function.
+- [llm.py](mdc:llm.py): Performs contextual summarization, NER/event detection, and prompts an LLM (OpenAI or Anthropic) for actionable summaries. Supports both traditional two-step approach and unified direct-LLM approach via analyze_newsletters_unified() that extracts topics and generates summaries in a single step. Now includes OpenRouter integration for cost tracking and analytics.
 - [report.py](mdc:report.py): Generates the final markdown report, including top developments, sources, and methodology. Handles newsletter website mapping and caching.
 - [review_newsletter_websites.py](mdc:review_newsletter_websites.py): CLI tool for reviewing and verifying newsletter website mappings in the cache.
+- [analyze_costs.py](mdc:analyze_costs.py): Analyzes and reports on OpenRouter usage costs and token consumption patterns.
+- [verify_openrouter.py](mdc:verify_openrouter.py): Tests the OpenRouter integration to ensure it's properly configured.
+
+## Key Features
+
+- Supports up to 10 topics (default) ordered by importance
+- Two approaches available: NLP+LLM (separate topic extraction and summarization) or direct-LLM (combined approach)
+- Enhanced topic filtering to exclude newsletter metadata, account information, and layout-related content
+- Improved context examples with HTML cleanup for better topic relevance
+- Configurable via command-line arguments including number of topics and analysis method
+- OpenRouter integration for cost tracking and analytics of LLM API calls
+- Fallback mechanisms to handle API failures gracefully
 
 ## Testing
 
 - [test_fetch_api.py](mdc:test_fetch_api.py): Unit tests for email fetching and parsing logic.
 - [test_e2e_cli.py](mdc:test_e2e_cli.py): End-to-end tests for the CLI workflow and report generation.
+
+## Configuration
+
+- Environment variables: Control API keys, output directory, and OpenRouter settings
+- Command-line arguments: Control behavior for each run (days, label, provider, etc.)
+- `.env.local`: Local environment configuration (API keys, OpenRouter settings)
 
 Supporting files include [requirements.txt](mdc:requirements.txt), [requirements-dev.txt](mdc:requirements-dev.txt), [newsletter_websites.json](mdc:newsletter_websites.json) (website cache), and configuration files for environment variables and tokens. 

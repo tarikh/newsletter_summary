@@ -327,3 +327,53 @@ To run all tests:
 ```bash
 pytest
 ```
+
+## OpenRouter Integration
+
+This project now supports routing LLM API calls through [OpenRouter](https://openrouter.ai) for improved cost tracking and analytics. 
+
+### Setup
+
+1. Create an OpenRouter account and obtain an API key
+2. Create a `.env.local` file from the example file:
+   ```bash
+   cp .env.local.example .env.local
+   ```
+3. Add your OpenRouter API key to the `.env.local` file:
+   ```
+   OPENROUTER_API_KEY=your_openrouter_api_key_here
+   ```
+
+### Configuration Options
+
+- `USE_OPENROUTER`: Set to `true` (default) to route all LLM calls through OpenRouter or `false` to use direct API calls
+- `OPENROUTER_COST_LOG`: Path to the JSON file for logging cost data (default: `openrouter_costs.json`)
+
+### Verifying the Integration
+
+Run the verification script to check if OpenRouter is properly configured:
+
+```bash
+python verify_openrouter.py
+```
+
+### Cost Analysis
+
+You can analyze OpenRouter usage costs using the analysis tool:
+
+```bash
+python analyze_costs.py
+```
+
+Additional options:
+```bash
+python analyze_costs.py --days 7  # Analyze costs for the past 7 days
+```
+
+### Model Mapping
+
+When using OpenRouter, the following models are used:
+- `--llm-provider claude`: routes to `anthropic/claude-3-7-sonnet`
+- `--llm-provider openai`: routes to `openai/gpt-4.1`
+
+All LLM requests now include usage tracking information, making it easier to monitor costs and adjust usage patterns accordingly.

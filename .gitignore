@@ -16,6 +16,9 @@ ai_newsletter_summary_*.md
 ai_newsletter_summary_*.pdf
 ai_newsletter_summary_*.html
 
+# Implementation plans
+#plan_*.md
+
 # Python
 __pycache__/
 *.py[cod]
