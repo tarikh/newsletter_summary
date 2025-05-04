@@ -130,7 +130,6 @@ The tool caches detected newsletter websites for each source and marks them as *
 
     By default, this analyzes newsletters from the past 7 days using OpenAI GPT-4.1. See Command-line Options below to customize.
 
-    **Example: Use the advanced KeyBERT-based NLP method (default):**
     **Example: Use the advanced KeyBERT-based NLP method (with traditional NLP approach):**
     ```bash
     python main.py --days 3 --nlp-method keybert --traditional-nlp
@@ -319,6 +318,8 @@ For more advanced modifications:
     nltk.download('stopwords')
     ```
 -   **spaCy Model Not Found**: If you see an error about `en_core_web_sm` not found, run:
+    ```
+    python -m spacy download en_core_web_sm
     ```
 
 ## Testing
