@@ -9,7 +9,7 @@ The AI Newsletter Summarizer is a Python tool designed to automatically retrieve
 - Identifies key topics and trends across newsletters using advanced NLP techniques
 - **Contextual Summarization & NER:** For each topic, extracts key entities (ORG, PERSON, PRODUCT, etc.), event-related sentences, and context snippets using spaCy and sumy, and provides these to the LLM for richer, more actionable summaries
 - Prioritizes recent content and breaking news (configurable)
-- Uses Anthropic's Claude AI or OpenAI's GPT-4.1 to generate summaries focused on practical applications and real-world impact (OpenAI is now the default)
+- Uses OpenRouter to route requests to either OpenAI GPT-4.1 (default) or Anthropic's Claude 3.7 Sonnet for cost-efficient API usage and tracking
 - Outputs a markdown report with the top AI developments, why they matter, and actionable insights
 - Includes links to newsletter sources and a brief methodology section
 - **Modular codebase**: Authentication, fetching, NLP, LLM analysis, and reporting are now in separate modules for easier maintenance and extension
@@ -49,11 +49,12 @@ The tool caches detected newsletter websites for each source and marks them as *
 - Python 3.11 (recommended), or 3.10 (also supported)
 - Gmail account with newsletters tagged/labeled as `ai-newsletter`
 - Google API credentials (`credentials.json`) obtained from Google Cloud Console
-- Anthropic API key (set as `ANTHROPIC_API_KEY` environment variable) if using Claude
-- OpenAI API key (set as `OPENAI_API_KEY` environment variable) if using OpenAI (default)
+- **OpenRouter API key** (set as `OPENROUTER_API_KEY` environment variable) - required as the default API provider
+- OpenAI API key (set as `OPENAI_API_KEY` environment variable) - only needed if not using OpenRouter
+- Anthropic API key (set as `ANTHROPIC_API_KEY` environment variable) - only needed if not using OpenRouter
 - `keybert`, `sentence-transformers`, `scikit-learn` (for advanced topic extraction)
 - `spacy`, `sumy` (for contextual summarization and NER/event detection)
-- `openai` (for OpenAI GPT-4.1 support)
+- `openai` and `anthropic` Python packages for API access
 
 ## Installation
 
@@ -92,9 +93,9 @@ The tool caches detected newsletter websites for each source and marks them as *
     - Download the credentials JSON file.
     - **Rename and save the downloaded file as `credentials.json`** in the project's root directory.
 
-5.  **Get an Anthropic API key**
+5.  **Get an OpenRouter API key**
 
-    - Sign up at [Anthropic](https://www.anthropic.com/) (if you don't have an account).
+    - Sign up at [OpenRouter](https://openrouter.ai/) (if you don't have an account).
     - Obtain an API key from your account dashboard.
 
 6.  **Create a `.env.local` file**
@@ -102,6 +103,14 @@ The tool caches detected newsletter websites for each source and marks them as *
     Create a file named `.env.local` in the project directory and add your API keys:
 
     ```dotenv
+    # Required - default API provider
+    OPENROUTER_API_KEY=your_openrouter_api_key_here
+    
+    # Optional - OpenRouter configuration
+    USE_OPENROUTER=true
+    OPENROUTER_COST_LOG=openrouter_costs.json
+    
+    # Optional - only needed if bypassing OpenRouter with USE_OPENROUTER=false
     ANTHROPIC_API_KEY=your_anthropic_api_key_here
     OPENAI_API_KEY=your_openai_api_key_here
     ```
@@ -128,7 +137,7 @@ The tool caches detected newsletter websites for each source and marks them as *
     python main.py
     ```
 
-    By default, this analyzes newsletters from the past 7 days using OpenAI GPT-4.1. See Command-line Options below to customize.
+    By default, this analyzes newsletters from the past 7 days using OpenRouter to connect to OpenAI GPT-4.1. See Command-line Options below to customize.
 
     **Example: Use the advanced KeyBERT-based NLP method (with traditional NLP approach):**
     ```bash
@@ -240,7 +249,7 @@ You can modify the tool's behavior using these optional flags:
     ```
     (Default: `keybert`)
 
--   `--llm-provider`, choices: `claude`, `openai` (default: `openai`): Choose the LLM provider for summarization. `openai` (default) uses OpenAI GPT-4.1, `claude` uses Claude 3.7 Sonnet.
+-   `--llm-provider`, choices: `claude`, `openai` (default: `openai`): Choose the LLM provider for summarization. `openai` (default) uses OpenAI GPT-4.1, `claude` uses Claude 3.7 Sonnet. This is routed through OpenRouter by default for cost tracking.
 
 -   `--num-topics N`: Specify the number of topics to extract and summarize.
     ```bash
@@ -284,7 +293,7 @@ The tool offers two distinct approaches to generating summaries:
 - More control over topic selection but requires two processing stages
 - Enable with the `--traditional-nlp` flag
 
-Both approaches support customizing the number of topics (default: 10) and choosing between OpenAI and Claude as the LLM provider.
+Both approaches support customizing the number of topics (default: 10) and choosing between OpenAI and Claude as the LLM provider through OpenRouter.
 
 ## Modular Architecture
 
@@ -321,6 +330,7 @@ For more advanced modifications:
     ```
     python -m spacy download en_core_web_sm
     ```
+-   **OpenRouter API Issues**: If you encounter problems with OpenRouter, you can disable it by setting `USE_OPENROUTER=false` in your `.env.local` file. This will make direct API calls to either OpenAI or Anthropic, but you'll need to provide the respective API keys.
 
 ## Testing
 
@@ -335,19 +345,7 @@ pytest
 
 ## OpenRouter Integration
 
-This project now supports routing LLM API calls through [OpenRouter](https://openrouter.ai) for improved cost tracking and analytics. 
-
-### Setup
-
-1. Create an OpenRouter account and obtain an API key
-2. Create a `.env.local` file from the example file:
-   ```bash
-   cp .env.local.example .env.local
-   ```
-3. Add your OpenRouter API key to the `.env.local` file:
-   ```
-   OPENROUTER_API_KEY=your_openrouter_api_key_here
-   ```
+This project uses [OpenRouter](https://openrouter.ai) by default for all LLM API calls, providing improved cost tracking and analytics. 
 
 ### Configuration Options
 
