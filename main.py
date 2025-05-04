@@ -40,8 +40,8 @@ def main():
                         help='Debug mode: only extract and display key topics and the cleaned text used for topic extraction')
     parser.add_argument('--num-topics', type=int, default=10,
                         help='Number of topics to extract and summarize (default: 10)')
-    parser.add_argument('--direct-llm', action='store_true',
-                        help='Use direct-to-LLM approach for both topic extraction and summarization')
+    parser.add_argument('--traditional-nlp', action='store_true',
+                        help='Use traditional two-step approach (NLP topic extraction + LLM analysis) instead of direct-LLM')
     parser.set_defaults(prioritize_recent=True, breaking_news_section=True)
     args = parser.parse_args()
     try:
@@ -69,7 +69,7 @@ def main():
             cleaned_text = "\n\n".join([clean_body(nl['body'], nl.get('body_format')) + "\n" + nl['subject'] for nl in newsletters])
             print(cleaned_text)
             print("\n--- DEBUG: Key topics identified ---\n")
-            if args.direct_llm:
+            if not args.traditional_nlp:
                 topics = extract_key_topics_direct_llm(newsletters, num_topics=args.num_topics, provider=args.llm_provider)
             elif args.nlp_method == 'keybert':
                 topics = extract_key_topics_keybert(newsletters, num_topics=args.num_topics)
@@ -78,20 +78,9 @@ def main():
             print(f"Identified {len(topics)} key topics: {', '.join(topics)}")
             return
         
-        if args.direct_llm:
-            # Direct LLM approach - combined topic extraction and summarization
-            print(f"Using direct LLM approach with {args.llm_provider} to extract and summarize {args.num_topics} topics...")
-            
-            llm_analysis, topics = analyze_newsletters_unified(
-                newsletters, 
-                num_topics=args.num_topics,
-                provider=args.llm_provider
-            )
-            
-            print(f"Identified and analyzed {len(topics)} topics")
-        else:
+        if args.traditional_nlp:
             # Original approach with separate NLP and LLM steps
-            print("Extracting key topics...")
+            print("Using traditional NLP + LLM approach as requested...")
             if args.nlp_method == 'keybert':
                 print(f"  - Using KeyBERT + semantic clustering to identify {args.num_topics} topics")
                 topics = extract_key_topics_keybert(newsletters, num_topics=args.num_topics)
@@ -109,6 +98,17 @@ def main():
             print(f"Using topics: {', '.join(topics)}")
             print("Analyzing newsletter content...")
             llm_analysis = analyze_with_llm(newsletters, topics, provider=args.llm_provider)
+        else:
+            # Direct LLM approach - combined topic extraction and summarization (now default)
+            print(f"Using direct LLM approach with {args.llm_provider} to extract and summarize {args.num_topics} topics...")
+            
+            llm_analysis, topics = analyze_newsletters_unified(
+                newsletters, 
+                num_topics=args.num_topics,
+                provider=args.llm_provider
+            )
+            
+            print(f"Identified and analyzed {len(topics)} topics")
         
         print("Generating report...")
         if not args.breaking_news_section:

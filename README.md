@@ -13,7 +13,7 @@ The AI Newsletter Summarizer is a Python tool designed to automatically retrieve
 - Outputs a markdown report with the top AI developments, why they matter, and actionable insights
 - Includes links to newsletter sources and a brief methodology section
 - **Modular codebase**: Authentication, fetching, NLP, LLM analysis, and reporting are now in separate modules for easier maintenance and extension
-- **Two approaches available**: Traditional NLP-based topic extraction + LLM analysis, or a streamlined direct-to-LLM approach
+- **Two approaches available**: A streamlined direct-to-LLM approach (default) or traditional NLP-based topic extraction + LLM analysis
 
 ## Newsletter Website Cache & Review Workflow
 
@@ -131,24 +131,21 @@ The tool caches detected newsletter websites for each source and marks them as *
     By default, this analyzes newsletters from the past 7 days using OpenAI GPT-4.1. See Command-line Options below to customize.
 
     **Example: Use the advanced KeyBERT-based NLP method (default):**
+    **Example: Use the advanced KeyBERT-based NLP method (with traditional NLP approach):**
     ```bash
-    python main.py --days 3 --nlp-method keybert
+    python main.py --days 3 --nlp-method keybert --traditional-nlp
     ```
     **Example: Use the classic n-gram frequency method:**
     ```bash
-    python main.py --days 3 --nlp-method classic
+    python main.py --days 3 --nlp-method classic --traditional-nlp
     ```
     **Example: Use Claude 3.7 Sonnet instead of OpenAI (default):**
     ```bash
     python main.py --llm-provider claude
     ```
-    **Example: Explicitly use OpenAI (default):**
+    **Example: Use the traditional NLP approach instead of direct-LLM (default):**
     ```bash
-    python main.py --llm-provider openai
-    ```
-    **Example: Use the direct-to-LLM approach:**
-    ```bash
-    python main.py --direct-llm
+    python main.py --traditional-nlp
     ```
     **Example: Specify the number of topics to extract and analyze:**
     ```bash
@@ -234,9 +231,13 @@ You can modify the tool's behavior using these optional flags:
     ```
     (Default: enabled)
 
--   `--nlp-method keybert|classic`: Choose the NLP technique for topic extraction. `keybert` uses KeyBERT and semantic clustering (default), `classic` uses the original n-gram frequency method.
+-   `--nlp-method keybert|classic`: Choose the NLP technique for topic extraction when using `--traditional-nlp`. `keybert` uses KeyBERT and semantic clustering (default for traditional approach), `classic` uses the original n-gram frequency method.
     ```bash
     python main.py --nlp-method classic
+    ```
+    **Example: Use the classic n-gram frequency method with traditional NLP approach:**
+    ```bash
+    python main.py --nlp-method classic --traditional-nlp
     ```
     (Default: `keybert`)
 
@@ -248,9 +249,9 @@ You can modify the tool's behavior using these optional flags:
     ```
     (Default: `10`)
 
--   `--direct-llm`: Use direct-to-LLM approach for both topic extraction and summarization.
+-   `--traditional-nlp`: Use traditional NLP-based topic extraction instead of direct-LLM.
     ```bash
-    python main.py --direct-llm
+    python main.py --traditional-nlp
     ```
     (Default: disabled)
 
@@ -258,7 +259,9 @@ You can modify the tool's behavior using these optional flags:
 
 ## NLP Topic Extraction Methods
 
-- **KeyBERT + Semantic Clustering (default):**
+These methods are used when running with the `--traditional-nlp` flag:
+
+- **KeyBERT + Semantic Clustering (default for traditional approach):**
   - Extracts candidate keyphrases using KeyBERT, then clusters them using sentence-transformers embeddings.
   - Dynamically adjusts the number of clusters to the data volume.
   - If not enough distinct topics are found, fills in with the next best keyphrases or falls back to the classic method.
@@ -271,16 +274,16 @@ You can modify the tool's behavior using these optional flags:
 
 The tool offers two distinct approaches to generating summaries:
 
-### 1. Traditional NLP + LLM Approach (Default)
-- First extracts topics using either KeyBERT or classic n-gram frequency methods
-- Then provides these topics to the LLM for analysis and summarization
-- More control over topic selection but requires two processing stages
-
-### 2. Direct-to-LLM Approach
+### 1. Direct-to-LLM Approach (Default)
 - Sends newsletter content directly to the LLM
 - LLM identifies topics and generates summaries in a single step
 - Streamlined process with potentially more coherent topics
-- Enable with the `--direct-llm` flag
+
+### 2. Traditional NLP + LLM Approach
+- First extracts topics using either KeyBERT or classic n-gram frequency methods
+- Then provides these topics to the LLM for analysis and summarization
+- More control over topic selection but requires two processing stages
+- Enable with the `--traditional-nlp` flag
 
 Both approaches support customizing the number of topics (default: 10) and choosing between OpenAI and Claude as the LLM provider.
 
@@ -300,10 +303,11 @@ The codebase is now organized into the following modules for clarity and maintai
 
 For more advanced modifications:
 
--   To modify the number of key topics extracted, adjust the `num_topics` argument in the `extract_key_topics` function call within `main.py`.
--   To change the specific LLM prompt, analysis approach, or the LLM model used (e.g., a different Claude model), edit the `analyze_with_llm` function in `llm.py`.
+-   To modify the number of key topics extracted, adjust the `num_topics` argument in both approaches.
+-   To change the direct-LLM prompt or model, edit the `analyze_newsletters_unified` function in `llm.py`.
+-   To modify the traditional approach prompt, edit the `analyze_with_llm` function in `llm.py`.
 -   To customize the final report format or content, modify the `generate_report` function in `report.py`.
--   To add more stop words for NLP processing, update the `additional_stops` set in the `extract_key_topics` function in `nlp.py`.
+-   To add more stop words for NLP processing in the traditional approach, update the `additional_stops` set in the `extract_key_topics` function in `nlp.py`.
 
 ## Troubleshooting
 
