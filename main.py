@@ -7,8 +7,8 @@ load_dotenv('.env.local')
 import argparse
 from auth import authenticate_gmail
 from fetch import get_ai_newsletters
-from nlp import extract_key_topics_keybert, extract_key_topics, clean_body, extract_key_topics_direct_llm
-from llm import analyze_with_llm, analyze_newsletters_unified
+from utils import clean_body
+from llm import analyze_newsletters_unified
 from report import generate_report
 import json
 
@@ -24,8 +24,6 @@ def main():
                         help='Add a separate "Just In" section for latest newsletters (default: enabled)')
     parser.add_argument('--no-breaking-news-section', dest='breaking_news_section', action='store_false',
                         help='Do not add a separate "Just In" section')
-    parser.add_argument('--nlp-method', choices=['keybert', 'classic'], default='keybert',
-                        help='NLP technique for topic extraction: keybert (default) or classic')
     parser.add_argument('--llm-provider', choices=['claude', 'openai'], default='openai',
                         help='LLM provider for summarization: claude (Claude 3.7 Sonnet) or openai (default, GPT-4.1)')
     parser.add_argument('--label', type=str, default='ai-newsletter',
@@ -36,12 +34,8 @@ def main():
                         help='Only include emails from this sender email address (optional)')
     parser.add_argument('--to-email', type=str, default=None,
                         help='Only include emails sent to this recipient email address (optional)')
-    parser.add_argument('--debug-key-topics', action='store_true',
-                        help='Debug mode: only extract and display key topics and the cleaned text used for topic extraction')
     parser.add_argument('--num-topics', type=int, default=10,
                         help='Number of topics to extract and summarize (default: 10)')
-    parser.add_argument('--traditional-nlp', action='store_true',
-                        help='Use traditional two-step approach (NLP topic extraction + LLM analysis) instead of direct-LLM')
     parser.set_defaults(prioritize_recent=True, breaking_news_section=True)
     args = parser.parse_args()
     try:
@@ -64,51 +58,17 @@ def main():
         if not newsletters:
             print("No newsletters found. Check your Gmail labels or date range.")
             return
-        if args.debug_key_topics:
-            print("\n--- DEBUG: Cleaned text used for topic extraction ---\n")
-            cleaned_text = "\n\n".join([clean_body(nl['body'], nl.get('body_format')) + "\n" + nl['subject'] for nl in newsletters])
-            print(cleaned_text)
-            print("\n--- DEBUG: Key topics identified ---\n")
-            if not args.traditional_nlp:
-                topics = extract_key_topics_direct_llm(newsletters, num_topics=args.num_topics, provider=args.llm_provider)
-            elif args.nlp_method == 'keybert':
-                topics = extract_key_topics_keybert(newsletters, num_topics=args.num_topics)
-            else:
-                topics = extract_key_topics(newsletters, num_topics=args.num_topics)
-            print(f"Identified {len(topics)} key topics: {', '.join(topics)}")
-            return
         
-        if args.traditional_nlp:
-            # Original approach with separate NLP and LLM steps
-            print("Using traditional NLP + LLM approach as requested...")
-            if args.nlp_method == 'keybert':
-                print(f"  - Using KeyBERT + semantic clustering to identify {args.num_topics} topics")
-                topics = extract_key_topics_keybert(newsletters, num_topics=args.num_topics)
-            else:
-                print(f"  - Using classic n-gram frequency method to identify {args.num_topics} topics")
-                topics = extract_key_topics(newsletters, num_topics=args.num_topics)
-            
-            # Limit to num_topics
-            topics = topics[:args.num_topics]
-            
-            if not topics:
-                print("Error: No topics could be extracted. Please try a different date range or method.")
-                return
-                
-            print(f"Using topics: {', '.join(topics)}")
-            print("Analyzing newsletter content...")
-            llm_analysis = analyze_with_llm(newsletters, topics, provider=args.llm_provider)
-        else:
-            # Direct LLM approach - combined topic extraction and summarization (now default)
-            print(f"Using direct LLM approach with {args.llm_provider} to extract and summarize {args.num_topics} topics...")
-            
-            llm_analysis, topics = analyze_newsletters_unified(
-                newsletters, 
-                num_topics=args.num_topics,
-                provider=args.llm_provider
-            )
-            
-            print(f"Identified and analyzed {len(topics)} topics")
+        # Direct LLM approach - combined topic extraction and summarization
+        print(f"Using direct LLM approach with {args.llm_provider} to extract and summarize {args.num_topics} topics...")
+        
+        llm_analysis, topics = analyze_newsletters_unified(
+            newsletters, 
+            num_topics=args.num_topics,
+            provider=args.llm_provider
+        )
+        
+        print(f"Identified and analyzed {len(topics)} topics")
         
         print("Generating report...")
         if not args.breaking_news_section:

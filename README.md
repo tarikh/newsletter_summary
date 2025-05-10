@@ -6,14 +6,11 @@ The AI Newsletter Summarizer is a Python tool designed to automatically retrieve
 
 - Automatically fetches emails tagged with "ai-newsletter" from your Gmail account
 - Extracts and analyzes content from multiple newsletter sources
-- Identifies key topics and trends across newsletters using advanced NLP techniques
-- **Contextual Summarization & NER:** For each topic, extracts key entities (ORG, PERSON, PRODUCT, etc.), event-related sentences, and context snippets using spaCy and sumy, and provides these to the LLM for richer, more actionable summaries
-- Prioritizes recent content and breaking news (configurable)
+- Identifies key topics and trends across newsletters using advanced LLM techniques
 - Uses Anthropic's Claude AI or OpenAI's GPT-4.1 to generate summaries focused on practical applications and real-world impact (OpenAI is now the default)
 - Outputs a markdown report with the top AI developments, why they matter, and actionable insights
 - Includes links to newsletter sources and a brief methodology section
-- **Modular codebase**: Authentication, fetching, NLP, LLM analysis, and reporting are now in separate modules for easier maintenance and extension
-- **Two approaches available**: A streamlined direct-to-LLM approach (default) or traditional NLP-based topic extraction + LLM analysis
+- **Modular codebase**: Authentication, fetching, LLM analysis, and reporting are in separate modules for easier maintenance and extension
 
 ## Newsletter Website Cache & Review Workflow
 
@@ -51,9 +48,6 @@ The tool caches detected newsletter websites for each source and marks them as *
 - Google API credentials (`credentials.json`) obtained from Google Cloud Console
 - Anthropic API key (set as `ANTHROPIC_API_KEY` environment variable) if using Claude
 - OpenAI API key (set as `OPENAI_API_KEY` environment variable) if using OpenAI (default)
-- `keybert`, `sentence-transformers`, `scikit-learn` (for advanced topic extraction)
-- `spacy`, `sumy` (for contextual summarization and NER/event detection)
-- `openai` (for OpenAI GPT-4.1 support)
 
 ## Installation
 
@@ -78,8 +72,6 @@ The tool caches detected newsletter websites for each source and marks them as *
     ```bash
     pip install --upgrade pip setuptools wheel
     pip install -r requirements.txt
-    # Download spaCy English model
-    python -m spacy download en_core_web_sm
     ```
 
 4.  **Set up Google OAuth credentials**
@@ -122,7 +114,7 @@ The tool caches detected newsletter websites for each source and marks them as *
 
 3.  **Run the tool**
 
-    **The entry point is now `main.py` (not `summ.py`)**:
+    **The entry point is `main.py`**:
 
     ```bash
     python main.py
@@ -130,23 +122,11 @@ The tool caches detected newsletter websites for each source and marks them as *
 
     By default, this analyzes newsletters from the past 7 days using OpenAI GPT-4.1. See Command-line Options below to customize.
 
-    **Example: Use the advanced KeyBERT-based NLP method (default):**
-    **Example: Use the advanced KeyBERT-based NLP method (with traditional NLP approach):**
-    ```bash
-    python main.py --days 3 --nlp-method keybert --traditional-nlp
-    ```
-    **Example: Use the classic n-gram frequency method:**
-    ```bash
-    python main.py --days 3 --nlp-method classic --traditional-nlp
-    ```
     **Example: Use Claude 3.7 Sonnet instead of OpenAI (default):**
     ```bash
     python main.py --llm-provider claude
     ```
-    **Example: Use the traditional NLP approach instead of direct-LLM (default):**
-    ```bash
-    python main.py --traditional-nlp
-    ```
+    
     **Example: Specify the number of topics to extract and analyze:**
     ```bash
     python main.py --num-topics 7
@@ -162,12 +142,6 @@ The tool caches detected newsletter websites for each source and marks them as *
 5.  **View the Results**
 
     The tool will output progress messages to the console. Once finished, it will generate a markdown file named `ai_newsletter_summary_YYYYMMDD_to_YYYYMMDD_HHMM.md` in the project directory. The filename reflects the actual date range of the newsletters analyzed **and the time of the summary run**, so multiple runs in a day will not overwrite each other. Open this file to view your summarized report.
-
-    **Each topic in the summary now includes:**
-    - Key entities (organizations, people, products, etc.)
-    - Key event sentences (launches, announcements, etc.)
-    - Contextual snippets (summarized sentences)
-    - All of this is provided to the LLM for more informative and actionable summaries.
 
 ### Custom Output Directory
 
@@ -199,185 +173,74 @@ You can modify the tool's behavior using these optional flags:
     ```bash
     python main.py --label my-custom-label
     ```
-    (Default: `ai-newsletter`)
 
--   `--no-label`: Do not use any Gmail label as a search criteria (overrides `--label`).
+-   `--no-label`: Do not use any Gmail label as a search criterion (useful if you want to search by other criteria like sender).
     ```bash
-    python main.py --no-label --from-email sender@example.com
+    python main.py --no-label --from-email newsletter@example.com
     ```
-    (Use this to summarize emails by sender, recipient, or date only, with no label required.)
 
--   `--from-email EMAIL`: Only include emails from this sender email address (optional).
+-   `--from-email EMAIL`: Only include emails from the specified sender.
     ```bash
-    python main.py --from-email sender@example.com
+    python main.py --from-email newsletter@example.com
     ```
-    (Optional)
 
--   `--to-email EMAIL`: Only include emails sent to this recipient email address (optional).
+-   `--to-email EMAIL`: Only include emails sent to the specified recipient.
     ```bash
-    python main.py --to-email recipient@example.com
+    python main.py --to-email yourname@gmail.com
     ```
-    (Optional)
 
--   `--prioritize-recent` / `--no-prioritize-recent`: Enable or disable giving higher weight to more recent newsletters during topic extraction.
+-   `--llm-provider PROVIDER`: Choose between `claude` (Claude 3.7 Sonnet) or `openai` (GPT-4.1, default).
+    ```bash
+    python main.py --llm-provider claude
+    ```
+
+-   `--num-topics N`: Specify the number of topics to extract and summarize (default: 10).
+    ```bash
+    python main.py --num-topics 7
+    ```
+
+-   `--no-prioritize-recent`: Disable higher weighting for recent newsletters.
     ```bash
     python main.py --no-prioritize-recent
     ```
-    (Default: enabled)
 
--   `--breaking-news-section` / `--no-breaking-news-section`: Enable or disable the separate "Just In" section in the report, which highlights headlines from the very latest newsletters (last ~24 hours).
+-   `--no-breaking-news-section`: Disable the separate "Just In" section for latest developments.
     ```bash
     python main.py --no-breaking-news-section
     ```
-    (Default: enabled)
 
--   `--nlp-method keybert|classic`: Choose the NLP technique for topic extraction when using `--traditional-nlp`. `keybert` uses KeyBERT and semantic clustering (default for traditional approach), `classic` uses the original n-gram frequency method.
-    ```bash
-    python main.py --nlp-method classic
-    ```
-    **Example: Use the classic n-gram frequency method with traditional NLP approach:**
-    ```bash
-    python main.py --nlp-method classic --traditional-nlp
-    ```
-    (Default: `keybert`)
+## Optional Configuration: OpenRouter API
 
--   `--llm-provider`, choices: `claude`, `openai` (default: `openai`): Choose the LLM provider for summarization. `openai` (default) uses OpenAI GPT-4.1, `claude` uses Claude 3.7 Sonnet.
+For production environments, this tool supports routing requests through [OpenRouter](https://openrouter.ai), which offers:
 
--   `--num-topics N`: Specify the number of topics to extract and summarize.
-    ```bash
-    python main.py --num-topics 8
-    ```
-    (Default: `10`)
+1. Competitive pricing
+2. Detailed usage tracking
+3. Access to both Claude and OpenAI models through a single API
 
--   `--traditional-nlp`: Use traditional NLP-based topic extraction instead of direct-LLM.
-    ```bash
-    python main.py --traditional-nlp
-    ```
-    (Default: disabled)
+To use OpenRouter:
 
--   `-h` / `--help`: Show all available command-line options and usage examples.
-
-## NLP Topic Extraction Methods
-
-These methods are used when running with the `--traditional-nlp` flag:
-
-- **KeyBERT + Semantic Clustering (default for traditional approach):**
-  - Extracts candidate keyphrases using KeyBERT, then clusters them using sentence-transformers embeddings.
-  - Dynamically adjusts the number of clusters to the data volume.
-  - If not enough distinct topics are found, fills in with the next best keyphrases or falls back to the classic method.
-  - **Always returns the requested number of topics if possible, even with thin data.**
-
-- **Classic n-gram Frequency:**
-  - Uses frequency analysis of n-grams and subject lines to extract topics.
-
-## Approaches
-
-The tool offers two distinct approaches to generating summaries:
-
-### 1. Direct-to-LLM Approach (Default)
-- Sends newsletter content directly to the LLM
-- LLM identifies topics and generates summaries in a single step
-- Streamlined process with potentially more coherent topics
-
-### 2. Traditional NLP + LLM Approach
-- First extracts topics using either KeyBERT or classic n-gram frequency methods
-- Then provides these topics to the LLM for analysis and summarization
-- More control over topic selection but requires two processing stages
-- Enable with the `--traditional-nlp` flag
-
-Both approaches support customizing the number of topics (default: 10) and choosing between OpenAI and Claude as the LLM provider.
-
-## Modular Architecture
-
-The codebase is now organized into the following modules for clarity and maintainability:
-
-- `auth.py` — Gmail authentication
-- `fetch.py` — Email fetching
-- `nlp.py` — Topic extraction (includes traditional and direct-LLM methods)
-- `llm.py` — LLM analysis (both unified and sequential approaches)
-- `report.py` — Report generation
-- `main.py` — Entry point (run this file to use your tool)
-- `summ.py` — Now just a stub, instructing users to use `main.py`
-
-## Customization
-
-For more advanced modifications:
-
--   To modify the number of key topics extracted, adjust the `num_topics` argument in both approaches.
--   To change the direct-LLM prompt or model, edit the `analyze_newsletters_unified` function in `llm.py`.
--   To modify the traditional approach prompt, edit the `analyze_with_llm` function in `llm.py`.
--   To customize the final report format or content, modify the `generate_report` function in `report.py`.
--   To add more stop words for NLP processing in the traditional approach, update the `additional_stops` set in the `extract_key_topics` function in `nlp.py`.
-
-## Troubleshooting
-
--   **NumPy Build Errors / Python Version:** If you encounter errors building NumPy or other scientific packages, use Python 3.11 (recommended) or 3.10. Python 3.12+ and 3.13 may not be fully supported by all dependencies yet.
--   **NLTK Resource Errors**: If you encounter errors like `Resource punkt not found.` during the first run, the tool attempts to download them automatically. If automatic download fails (e.g., due to network issues), you might need to run the following in a Python interpreter within your activated virtual environment:
-    ```python
-    import nltk
-    nltk.download('punkt')
-    nltk.download('stopwords')
-    ```
--   **spaCy Model Not Found**: If you see an error about `en_core_web_sm` not found, run:
-    ```
-
-## Testing
-
-- `test_fetch_api.py`: Unit tests for email fetching and parsing logic.
-- `test_e2e_cli.py`: End-to-end tests for the CLI workflow and report generation.
-
-To run all tests:
-
-```bash
-pytest
-```
-
-## OpenRouter Integration
-
-This project now supports routing LLM API calls through [OpenRouter](https://openrouter.ai) for improved cost tracking and analytics. 
-
-### Setup
-
-1. Create an OpenRouter account and obtain an API key
-2. Create a `.env.local` file from the example file:
-   ```bash
-   cp .env.local.example .env.local
+1. Sign up at [OpenRouter.ai](https://openrouter.ai)
+2. Get your API key
+3. Add it to your `.env.local` file:
    ```
-3. Add your OpenRouter API key to the `.env.local` file:
-   ```
-   OPENROUTER_API_KEY=your_openrouter_api_key_here
+   OPENROUTER_API_KEY=your_openrouter_key
+   USE_OPENROUTER=true  # Optional, defaults to true
    ```
 
-### Configuration Options
-
-- `USE_OPENROUTER`: Set to `true` (default) to route all LLM calls through OpenRouter or `false` to use direct API calls
-- `OPENROUTER_COST_LOG`: Path to the JSON file for logging cost data (default: `openrouter_costs.json`)
-
-### Verifying the Integration
-
-Run the verification script to check if OpenRouter is properly configured:
-
+To check your OpenRouter setup:
 ```bash
 python verify_openrouter.py
 ```
 
-### Cost Analysis
-
-You can analyze OpenRouter usage costs using the analysis tool:
-
+To analyze request costs:
 ```bash
 python analyze_costs.py
 ```
 
-Additional options:
-```bash
-python analyze_costs.py --days 7  # Analyze costs for the past 7 days
-```
+## Contributing
 
-### Model Mapping
+Contributions are welcome! Feel free to submit a Pull Request.
 
-When using OpenRouter, the following models are used:
-- `--llm-provider claude`: routes to `anthropic/claude-3-7-sonnet`
-- `--llm-provider openai`: routes to `openai/gpt-4.1`
+## License
 
-All LLM requests now include usage tracking information, making it easier to monitor costs and adjust usage patterns accordingly.
+This project is available under the MIT License.
