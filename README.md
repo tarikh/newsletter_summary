@@ -6,8 +6,9 @@ The AI Newsletter Summarizer is a Python tool designed to automatically retrieve
 
 - Automatically fetches emails tagged with "ai-newsletter" from your Gmail account
 - Extracts and analyzes content from multiple newsletter sources
-- Identifies key topics and trends across newsletters using advanced LLM techniques
-- Uses Anthropic's Claude AI or OpenAI's GPT-4.1 to generate summaries focused on practical applications and real-world impact (OpenAI is now the default)
+- Identifies key topics and trends across newsletters using advanced LLM techniques (default) or traditional NLP methods
+- Uses OpenRouter to route requests to either OpenAI GPT-4.1 (default) or Anthropic's Claude 3.7 Sonnet for cost-efficient API usage and tracking
+- Prioritizes recent content and breaking news (configurable)
 - Outputs a markdown report with the top AI developments, why they matter, and actionable insights
 - Includes links to newsletter sources and a brief methodology section
 - **Modular codebase**: Authentication, fetching, LLM analysis, and reporting are in separate modules for easier maintenance and extension
@@ -46,8 +47,10 @@ The tool caches detected newsletter websites for each source and marks them as *
 - Python 3.11 (recommended), or 3.10 (also supported)
 - Gmail account with newsletters tagged/labeled as `ai-newsletter`
 - Google API credentials (`credentials.json`) obtained from Google Cloud Console
-- Anthropic API key (set as `ANTHROPIC_API_KEY` environment variable) if using Claude
-- OpenAI API key (set as `OPENAI_API_KEY` environment variable) if using OpenAI (default)
+- **OpenRouter API key** (set as `OPENROUTER_API_KEY` environment variable) - required as the default API provider
+- OpenAI API key (set as `OPENAI_API_KEY` environment variable) - only needed if not using OpenRouter
+- Anthropic API key (set as `ANTHROPIC_API_KEY` environment variable) - only needed if not using OpenRouter
+- `openai` and `anthropic` Python packages for API access
 
 ## Installation
 
@@ -84,9 +87,9 @@ The tool caches detected newsletter websites for each source and marks them as *
     - Download the credentials JSON file.
     - **Rename and save the downloaded file as `credentials.json`** in the project's root directory.
 
-5.  **Get an Anthropic API key**
+5.  **Get an OpenRouter API key**
 
-    - Sign up at [Anthropic](https://www.anthropic.com/) (if you don't have an account).
+    - Sign up at [OpenRouter](https://openrouter.ai/) (if you don't have an account).
     - Obtain an API key from your account dashboard.
 
 6.  **Create a `.env.local` file**
@@ -94,6 +97,14 @@ The tool caches detected newsletter websites for each source and marks them as *
     Create a file named `.env.local` in the project directory and add your API keys:
 
     ```dotenv
+    # Required - default API provider
+    OPENROUTER_API_KEY=your_openrouter_api_key_here
+    
+    # Optional - OpenRouter configuration
+    USE_OPENROUTER=true
+    OPENROUTER_COST_LOG=openrouter_costs.json
+    
+    # Optional - only needed if bypassing OpenRouter with USE_OPENROUTER=false
     ANTHROPIC_API_KEY=your_anthropic_api_key_here
     OPENAI_API_KEY=your_openai_api_key_here
     ```
@@ -120,7 +131,7 @@ The tool caches detected newsletter websites for each source and marks them as *
     python main.py
     ```
 
-    By default, this analyzes newsletters from the past 7 days using OpenAI GPT-4.1. See Command-line Options below to customize.
+    By default, this analyzes newsletters from the past 7 days using OpenRouter to connect to OpenAI GPT-4.1. See Command-line Options below to customize.
 
     **Example: Use Claude 3.7 Sonnet instead of OpenAI (default):**
     ```bash
@@ -209,23 +220,15 @@ You can modify the tool's behavior using these optional flags:
     python main.py --no-breaking-news-section
     ```
 
-## Optional Configuration: OpenRouter API
+-   `-h` / `--help`: Show all available command-line options and usage examples.
 
-For production environments, this tool supports routing requests through [OpenRouter](https://openrouter.ai), which offers:
+## OpenRouter Integration
+
+This project uses [OpenRouter](https://openrouter.ai) by default for all LLM API calls, providing:
 
 1. Competitive pricing
 2. Detailed usage tracking
 3. Access to both Claude and OpenAI models through a single API
-
-To use OpenRouter:
-
-1. Sign up at [OpenRouter.ai](https://openrouter.ai)
-2. Get your API key
-3. Add it to your `.env.local` file:
-   ```
-   OPENROUTER_API_KEY=your_openrouter_key
-   USE_OPENROUTER=true  # Optional, defaults to true
-   ```
 
 To check your OpenRouter setup:
 ```bash
@@ -235,6 +238,50 @@ python verify_openrouter.py
 To analyze request costs:
 ```bash
 python analyze_costs.py
+```
+
+## Approaches
+
+The tool offers two distinct approaches to generating summaries:
+
+### 1. Direct-to-LLM Approach (Default)
+- Sends newsletter content directly to the LLM
+- LLM identifies topics and generates summaries in a single step
+- Streamlined process with potentially more coherent topics
+
+## Modular Architecture
+
+The codebase is organized into the following modules for clarity and maintainability:
+
+- `auth.py` — Gmail authentication
+- `fetch.py` — Email fetching
+- `llm.py` — LLM analysis
+- `report.py` — Report generation
+- `main.py` — Entry point (run this file to use your tool)
+- `summ.py` — Now just a stub, instructing users to use `main.py`
+
+## Customization
+
+For more advanced modifications:
+
+-   To modify the number of key topics extracted, adjust the `num_topics` argument.
+-   To change the direct-LLM prompt or model, edit the `analyze_newsletters_unified` function in `llm.py`.
+-   To customize the final report format or content, modify the `generate_report` function in `report.py`.
+
+## Troubleshooting
+
+-   **NumPy Build Errors / Python Version:** If you encounter errors building NumPy or other scientific packages, use Python 3.11 (recommended) or 3.10. Python 3.12+ and 3.13 may not be fully supported by all dependencies yet.
+-   **OpenRouter API Issues**: If you encounter problems with OpenRouter, you can disable it by setting `USE_OPENROUTER=false` in your `.env.local` file. This will make direct API calls to either OpenAI or Anthropic, but you'll need to provide the respective API keys.
+
+## Testing
+
+- `test_fetch_api.py`: Unit tests for email fetching and parsing logic.
+- `test_e2e_cli.py`: End-to-end tests for the CLI workflow and report generation.
+
+To run all tests:
+
+```bash
+pytest
 ```
 
 ## Contributing
