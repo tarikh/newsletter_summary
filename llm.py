@@ -57,7 +57,9 @@ Format your response with markdown:
 
 ### 1. [Topic Headline]
 **What's New:** [Brief description of the development]
+
 **Why It Matters:** [Explanation for regular users]
+
 **Practical Impact:** [2-3 specific actions or opportunities]
 
 ### 2. [Next Topic]
