@@ -138,6 +138,11 @@ The tool caches detected newsletter websites for each source and marks them as *
     python main.py --llm-provider claude
     ```
     
+    **Example: Use a specific custom OpenRouter model:**
+    ```bash
+    python main.py --model google/gemini-2.5-flash-preview:thinking
+    ```
+    
     **Example: Specify the number of topics to extract and analyze:**
     ```bash
     python main.py --num-topics 7
@@ -200,10 +205,16 @@ You can modify the tool's behavior using these optional flags:
     python main.py --to-email yourname@gmail.com
     ```
 
--   `--llm-provider PROVIDER`: Choose between `claude` (Claude 3.7 Sonnet) or `openai` (GPT-4.1, default).
+-   `--llm-provider PROVIDER`: Choose between `claude` (Claude 3.7 Sonnet), `openai` (GPT-4.1, default), or `google` (Gemini 2.0 Flash).
     ```bash
     python main.py --llm-provider claude
     ```
+
+-   `--model MODEL`: Specify a custom OpenRouter model to use (overrides --llm-provider).
+    ```bash
+    python main.py --model google/gemini-2.5-flash-preview:thinking
+    ```
+    This allows using any model available on OpenRouter.
 
 -   `--num-topics N`: Specify the number of topics to extract and summarize (default: 10).
     ```bash
