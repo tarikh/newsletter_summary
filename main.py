@@ -26,6 +26,8 @@ def main():
                         help='Do not add a separate "Just In" section')
     parser.add_argument('--llm-provider', choices=['claude', 'openai', 'google'], default='openai',
                         help='LLM provider for summarization: claude (Claude 3.7 Sonnet), openai (GPT-4.1), or google (Gemini 2.0 Flash)')
+    parser.add_argument('--model', type=str, default=None,
+                        help='Specify a custom OpenRouter model (e.g., "google/gemini-2.5-flash-preview:thinking") overriding the provider selection')
     parser.add_argument('--label', type=str, default='ai-newsletter',
                         help='Gmail label to filter newsletters (default: ai-newsletter)')
     parser.add_argument('--no-label', action='store_true',
@@ -60,12 +62,16 @@ def main():
             return
         
         # Direct LLM approach - combined topic extraction and summarization
-        print(f"Using direct LLM approach with {args.llm_provider} to extract and summarize {args.num_topics} topics...")
+        if args.model:
+            print(f"Using custom OpenRouter model: {args.model}")
+        else:
+            print(f"Using direct LLM approach with {args.llm_provider} to extract and summarize {args.num_topics} topics...")
         
         llm_analysis, topics = analyze_newsletters_unified(
             newsletters, 
             num_topics=args.num_topics,
-            provider=args.llm_provider
+            provider=args.llm_provider,
+            model=args.model
         )
         
         print(f"Identified and analyzed {len(topics)} topics")
