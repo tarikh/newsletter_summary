@@ -13,15 +13,16 @@ from utils import clean_body
 import requests
 import json
 
-def analyze_newsletters_unified(newsletters, num_topics=10, provider='openai'):
+def analyze_newsletters_unified(newsletters, num_topics=10, provider='openai', model=None):
     """
     Process newsletters in a single step - identifying topics and generating summaries.
-    Now with OpenRouter support.
+    Now with OpenRouter support and custom model option.
     
     Args:
         newsletters: List of newsletter dictionaries
         num_topics: Number of topics to identify and summarize (default: 10)
         provider: 'openai', 'claude', or 'google'
+        model: Optional custom OpenRouter model name, overrides provider if specified
         
     Returns:
         Tuple of (analysis_text, extracted_topic_titles)
@@ -95,7 +96,7 @@ NEWSLETTER CONTENT:
     analysis_text = ""
     if use_openrouter:
         print("Using OpenRouter for unified analysis")
-        analysis_text = analyze_with_openrouter(prompt, provider)
+        analysis_text = analyze_with_openrouter(prompt, provider, model)
     else:
         if provider == 'openai':
             client = openai.OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
@@ -124,13 +125,15 @@ NEWSLETTER CONTENT:
     
     return analysis_text, topic_titles
 
-def analyze_with_openrouter(prompt, model_provider):
+def analyze_with_openrouter(prompt, model_provider, custom_model=None):
     """
-    Route LLM requests through OpenRouter while maintaining the original provider choice.
+    Route LLM requests through OpenRouter while maintaining the original provider choice
+    or using a custom model if specified.
     
     Args:
         prompt: The prompt to send to the LLM
         model_provider: 'claude', 'openai', or 'google' to determine which model to use
+        custom_model: Optional custom OpenRouter model name that overrides the model_provider
     
     Returns:
         The LLM response
@@ -146,10 +149,15 @@ def analyze_with_openrouter(prompt, model_provider):
         'google': "google/gemini-2.0-flash-001"
     }
     
-    if model_provider not in model_map:
-        raise ValueError(f"Unknown model provider: {model_provider}")
-    
-    model = model_map[model_provider]
+    # Choose between custom model or mapped provider
+    if custom_model:
+        model = custom_model
+        print(f"Using custom OpenRouter model: {model}")
+    else:
+        if model_provider not in model_map:
+            raise ValueError(f"Unknown model provider: {model_provider}")
+        model = model_map[model_provider]
+        print(f"Using mapped OpenRouter model: {model}")
     
     # Prepare the system message based on the provider
     system_message = "You are an AI consultant helping summarize AI newsletter content for regular people. Your primary goal is to identify the MOST SIGNIFICANT developments across different domains of AI, based on what appears in the newsletters being analyzed. When writing headlines, focus on the substantive development rather than secondary features or demonstrations (e.g., 'Anthropic Launches Claude 3.7' rather than 'Claude AI Plays Pokémon'). Make the 'Why It Matters' section relevant to everyday life, and ensure the 'Practical Impact' section provides specific, actionable advice that regular people can implement. Be sure to include brand new developments (even if only mentioned in 1-2 newsletters) if they appear to be significant. Format your response with markdown headings and sections. For each topic, include source information and relevant links to the actual products/announcements. IMPORTANT: Ignore or exclude any sponsored, advertorial, or ad content when identifying and summarizing key developments. Do not include advertisers or sponsors as top content, even if they appear frequently."
@@ -192,7 +200,7 @@ def analyze_with_openrouter(prompt, model_provider):
         cost_log = {
             "timestamp": datetime.datetime.now().isoformat(),
             "model": model,
-            "provider": model_provider,
+            "provider": model_provider if not custom_model else "custom",
             "prompt_tokens": result['usage'].get('prompt_tokens', 0),
             "completion_tokens": result['usage'].get('completion_tokens', 0),
             "total_tokens": tokens,
@@ -226,11 +234,11 @@ def log_cost_data(cost_data):
     with open(log_file, 'w') as f:
         json.dump(existing_data, f, indent=2)
 
-def analyze_with_fallback(prompt, provider='openai'):
+def analyze_with_fallback(prompt, provider='openai', model=None):
     """Try OpenRouter first, fall back to direct API if there's an error"""
     try:
         # Try OpenRouter
-        return analyze_with_openrouter(prompt, provider)
+        return analyze_with_openrouter(prompt, provider, model)
     except Exception as e:
         print(f"Error using OpenRouter: {str(e)}")
         print("Falling back to direct API call...")
