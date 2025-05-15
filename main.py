@@ -1,1 +1,95 @@
-import os\nos.environ[\"TOKENIZERS_PARALLELISM\"] = \"false\"\n\nfrom dotenv import load_dotenv\nload_dotenv('.env.local')\n\nimport argparse\nfrom auth import authenticate_gmail\nfrom fetch import get_ai_newsletters\nfrom utils import clean_body\nfrom llm import analyze_newsletters_unified\nfrom report import generate_report\nimport json\n\ndef main():\n    parser = argparse.ArgumentParser(description='Summarize AI newsletters from Gmail.')\n    parser.add_argument('--days', type=int, default=7, \n                        help='Number of days to look back for newsletters (default: 7)')\n    parser.add_argument('--prioritize-recent', action='store_true',\n                        help='Give higher weight to more recent newsletters (default: enabled)')\n    parser.add_argument('--no-prioritize-recent', dest='prioritize_recent', action='store_false',\n                        help='Do not give higher weight to more recent newsletters')\n    parser.add_argument('--breaking-news-section', action='store_true',\n                        help='Add a separate \"Just In\" section for latest newsletters (default: enabled)')\n    parser.add_argument('--no-breaking-news-section', dest='breaking_news_section', action='store_false',\n                        help='Do not add a separate \"Just In\" section')\n    parser.add_argument('--llm-provider', choices=['claude', 'openai', 'gemini'], default='openai',\n                        help='LLM provider for summarization: claude (Claude 3.7 Sonnet), openai (GPT-4.1), or gemini (Gemini 2.0 Flash)')\n    parser.add_argument('--label', type=str, default='ai-newsletter',\n                        help='Gmail label to filter newsletters (default: ai-newsletter)')\n    parser.add_argument('--no-label', action='store_true',\n                        help='Do not use any Gmail label as a search criteria (overrides --label)')\n    parser.add_argument('--from-email', type=str, default=None,\n                        help='Only include emails from this sender email address (optional)')\n    parser.add_argument('--to-email', type=str, default=None,\n                        help='Only include emails sent to this recipient email address (optional)')\n    parser.add_argument('--num-topics', type=int, default=10,\n                        help='Number of topics to extract and summarize (default: 10)')\n    parser.set_defaults(prioritize_recent=True, breaking_news_section=True)\n    args = parser.parse_args()\n    try:\n        print(\"Authenticating with Gmail...\")\n        service = authenticate_gmail()\n        label_arg = None if args.no_label else args.label\n        print(f\"Retrieving AI newsletters from the past {args.days} days... (label: {label_arg if label_arg else 'none'})\")\n        mock_data_env = os.environ.get(\"NEWSLETTER_SUMMARY_MOCK_DATA\")\n        if mock_data_env:\n            newsletters = json.loads(mock_data_env)\n        else:\n            newsletters = get_ai_newsletters(\n                service,\n                days=args.days,\n                label=label_arg,\n                from_email=args.from_email,\n                to_email=args.to_email\n            )\n        print(f\"Found {len(newsletters)} newsletters.\")\n        if not newsletters:\n            print(\"No newsletters found. Check your Gmail labels or date range.\")\n            return\n        \n        # Direct LLM approach - combined topic extraction and summarization\n        print(f\"Using direct LLM approach with {args.llm_provider} to extract and summarize {args.num_topics} topics...\")\n        \n        llm_analysis, topics = analyze_newsletters_unified(\n            newsletters, \n            num_topics=args.num_topics,\n            provider=args.llm_provider\n        )\n        \n        print(f\"Identified and analyzed {len(topics)} topics\")\n        \n        print(\"Generating report...\")\n        if not args.breaking_news_section:\n            def generate_report_without_breaking(newsletters, topics, llm_analysis, days):\n                report, filename = generate_report(newsletters, topics, llm_analysis, days)\n                import re\n                report = re.sub(r'\\n## JUST IN: LATEST DEVELOPMENTS\\n\\n.*?\\n\\n## ', '\\n\\n## ', report, flags=re.DOTALL)\n                return report, filename\n            report, filename_date_range = generate_report_without_breaking(newsletters, topics, llm_analysis, args.days)\n        else:\n            report, filename_date_range = generate_report(newsletters, topics, llm_analysis, args.days)\n        report_filename = f\"ai_newsletter_summary_{filename_date_range}.md\"\n        output_dir = os.environ.get(\"NEWSLETTER_SUMMARY_OUTPUT_DIR\", \"\")\n        if output_dir:\n            os.makedirs(output_dir, exist_ok=True)\n            report_filename = os.path.join(output_dir, report_filename)\n        with open(report_filename, 'w') as f:\n            f.write(report)\n        print(f\"Report saved to {report_filename}\")\n    except Exception as e:\n        print(f\"Error: {str(e)}\")\n\nif __name__ == \"__main__\":\n    main()
+import os
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+from dotenv import load_dotenv
+load_dotenv('.env.local')
+
+import argparse
+from auth import authenticate_gmail
+from fetch import get_ai_newsletters
+from utils import clean_body
+from llm import analyze_newsletters_unified
+from report import generate_report
+import json
+
+def main():
+    parser = argparse.ArgumentParser(description='Summarize AI newsletters from Gmail.')
+    parser.add_argument('--days', type=int, default=7, 
+                        help='Number of days to look back for newsletters (default: 7)')
+    parser.add_argument('--prioritize-recent', action='store_true',
+                        help='Give higher weight to more recent newsletters (default: enabled)')
+    parser.add_argument('--no-prioritize-recent', dest='prioritize_recent', action='store_false',
+                        help='Do not give higher weight to more recent newsletters')
+    parser.add_argument('--breaking-news-section', action='store_true',
+                        help='Add a separate "Just In" section for latest newsletters (default: enabled)')
+    parser.add_argument('--no-breaking-news-section', dest='breaking_news_section', action='store_false',
+                        help='Do not add a separate "Just In" section')
+    parser.add_argument('--llm-provider', choices=['claude', 'openai', 'google'], default='openai',
+                        help='LLM provider for summarization: claude (Claude 3.7 Sonnet), openai (GPT-4.1), or google (Gemini 2.0 Flash)')
+    parser.add_argument('--label', type=str, default='ai-newsletter',
+                        help='Gmail label to filter newsletters (default: ai-newsletter)')
+    parser.add_argument('--no-label', action='store_true',
+                        help='Do not use any Gmail label as a search criteria (overrides --label)')
+    parser.add_argument('--from-email', type=str, default=None,
+                        help='Only include emails from this sender email address (optional)')
+    parser.add_argument('--to-email', type=str, default=None,
+                        help='Only include emails sent to this recipient email address (optional)')
+    parser.add_argument('--num-topics', type=int, default=10,
+                        help='Number of topics to extract and summarize (default: 10)')
+    parser.set_defaults(prioritize_recent=True, breaking_news_section=True)
+    args = parser.parse_args()
+    try:
+        print("Authenticating with Gmail...")
+        service = authenticate_gmail()
+        label_arg = None if args.no_label else args.label
+        print(f"Retrieving AI newsletters from the past {args.days} days... (label: {label_arg if label_arg else 'none'})")
+        mock_data_env = os.environ.get("NEWSLETTER_SUMMARY_MOCK_DATA")
+        if mock_data_env:
+            newsletters = json.loads(mock_data_env)
+        else:
+            newsletters = get_ai_newsletters(
+                service,
+                days=args.days,
+                label=label_arg,
+                from_email=args.from_email,
+                to_email=args.to_email
+            )
+        print(f"Found {len(newsletters)} newsletters.")
+        if not newsletters:
+            print("No newsletters found. Check your Gmail labels or date range.")
+            return
+        
+        # Direct LLM approach - combined topic extraction and summarization
+        print(f"Using direct LLM approach with {args.llm_provider} to extract and summarize {args.num_topics} topics...")
+        
+        llm_analysis, topics = analyze_newsletters_unified(
+            newsletters, 
+            num_topics=args.num_topics,
+            provider=args.llm_provider
+        )
+        
+        print(f"Identified and analyzed {len(topics)} topics")
+        
+        print("Generating report...")
+        if not args.breaking_news_section:
+            def generate_report_without_breaking(newsletters, topics, llm_analysis, days):
+                report, filename = generate_report(newsletters, topics, llm_analysis, days)
+                import re
+                report = re.sub(r'\n## JUST IN: LATEST DEVELOPMENTS\n\n.*?\n\n## ', '\n\n## ', report, flags=re.DOTALL)
+                return report, filename
+            report, filename_date_range = generate_report_without_breaking(newsletters, topics, llm_analysis, args.days)
+        else:
+            report, filename_date_range = generate_report(newsletters, topics, llm_analysis, args.days)
+        report_filename = f"ai_newsletter_summary_{filename_date_range}.md"
+        output_dir = os.environ.get("NEWSLETTER_SUMMARY_OUTPUT_DIR", "")
+        if output_dir:
+            os.makedirs(output_dir, exist_ok=True)
+            report_filename = os.path.join(output_dir, report_filename)
+        with open(report_filename, 'w') as f:
+            f.write(report)
+        print(f"Report saved to {report_filename}")
+    except Exception as e:
+        print(f"Error: {str(e)}")
+
+if __name__ == "__main__":
+    main()
