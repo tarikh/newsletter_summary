@@ -5,12 +5,22 @@ from dotenv import load_dotenv
 load_dotenv('.env.local')
 
 import argparse
+import datetime
 from auth import authenticate_gmail
 from fetch import get_ai_newsletters
 from utils import clean_body
 from llm import analyze_newsletters_unified
 from report import generate_report
 import json
+
+def get_default_model_name(provider):
+    """Return the actual model name based on the provider."""
+    model_map = {
+        'claude': "claude-3-7-sonnet-20250219",
+        'openai': "gpt-4.1-2025-04-14",
+        'google': "gemini-2.5-flash-preview"
+    }
+    return model_map.get(provider, "unknown model")
 
 def main():
     parser = argparse.ArgumentParser(description='Summarize AI newsletters from Gmail.')
@@ -76,16 +86,25 @@ def main():
         
         print(f"Identified and analyzed {len(topics)} topics")
         
+        # Construct model_info dictionary
+        model_info = {
+            "provider": args.llm_provider,
+            "model": args.model if args.model else get_default_model_name(args.llm_provider),
+            "timestamp": datetime.datetime.now().isoformat()
+        }
+        
         print("Generating report...")
         if not args.breaking_news_section:
-            def generate_report_without_breaking(newsletters, topics, llm_analysis, days):
-                report, filename = generate_report(newsletters, topics, llm_analysis, days)
+            def generate_report_without_breaking(newsletters, topics, llm_analysis, days, model_info):
+                report, filename = generate_report(newsletters, topics, llm_analysis, days, model_info)
                 import re
                 report = re.sub(r'\n## JUST IN: LATEST DEVELOPMENTS\n\n.*?\n\n## ', '\n\n## ', report, flags=re.DOTALL)
                 return report, filename
-            report, filename_date_range = generate_report_without_breaking(newsletters, topics, llm_analysis, args.days)
+            
+            report, filename_date_range = generate_report_without_breaking(newsletters, topics, llm_analysis, args.days, model_info)
         else:
-            report, filename_date_range = generate_report(newsletters, topics, llm_analysis, args.days)
+            report, filename_date_range = generate_report(newsletters, topics, llm_analysis, args.days, model_info)
+        
         report_filename = f"ai_newsletter_summary_{filename_date_range}.md"
         output_dir = os.environ.get("NEWSLETTER_SUMMARY_OUTPUT_DIR", "")
         if output_dir:
