@@ -60,13 +60,13 @@ For each topic:
 Format your response with markdown:
 
 ### 1. [Topic Headline]
-**What's New:** [Brief description of the development]
+- **What's New:** [Brief description of the development]
 
-**Why It Matters:** [Explanation for regular users]
+- **Why It Matters:** [Explanation for regular users]
 
-**Practical Impact:** [2-3 specific actions or opportunities]
+- **Practical Impact:** [2-3 specific actions or opportunities]
 
-**Source:** [Newsletter names that covered this topic]
+- **Source:** [Newsletter names that covered this topic]
 
 - 🔗 [Visit Website](https://link-to-actual-product-or-announcement)
 
@@ -144,9 +144,9 @@ def analyze_with_openrouter(prompt, model_provider, custom_model=None):
     
     # Map provider to actual OpenRouter model ID
     model_map = {
-        'claude': "anthropic/claude-3-7-sonnet",
+        'claude': "anthropic/claude-sonnet-4",
         'openai': "openai/gpt-4.1-mini",
-        'google': "google/gemini-2.5-flash-preview"
+        'google': "google/gemini-2.5-flash-preview-05-20"
     }
     
     # Choose between custom model or mapped provider
