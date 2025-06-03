@@ -54,8 +54,7 @@ For each topic:
 3. Explain "Why It Matters" for regular people in their daily lives
 4. Suggest "Practical Impact" with 2-3 specific actions people can take
 5. At the end of each topic, add:
-   - A line starting with "**Source:**" that lists the newsletter(s) where this information came from (e.g., "**Source:** The Neuron, TLDR AI")
-   - Add a line "- 🔗 [Visit Website](URL)" with a direct link to the product, model, paper, or announcement being discussed (NOT a link to the newsletter itself) if and only if there is an identifiably authoritative link available in the newsletters.
+   - A line starting with "**Source:**" that lists the newsletter(s) where this information came from (e.g., "**Source:** The Neuron, TLDR AI...")
 
 Format your response with markdown:
 
@@ -67,8 +66,6 @@ Format your response with markdown:
 - **Practical Impact:** [2-3 specific actions or opportunities]
 
 - **Source:** [Newsletter names that covered this topic]
-
-- 🔗 [Visit Website](https://link-to-actual-product-or-announcement)
 
 ### 2. [Next Topic]
 ...and so on
@@ -83,7 +80,6 @@ GUIDELINES:
 - "Why It Matters" should explain real-world implications, not just industry impact
 - "Practical Impact" must be truly actionable - what can regular people DO with this information?
 - For "Source" information, list the actual newsletter names (e.g., "The Neuron", "TLDR AI", "AI Breakfast")
-- For links, include URLs to the actual products/announcements when available, not to the newsletters
 
 NEWSLETTER CONTENT:
 {newsletter_content}
