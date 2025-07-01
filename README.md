@@ -13,35 +13,6 @@ The AI Newsletter Summarizer is a Python tool designed to automatically retrieve
 - Includes links to newsletter sources and a brief methodology section
 - **Modular codebase**: Authentication, fetching, LLM analysis, and reporting are in separate modules for easier maintenance and extension
 
-## Newsletter Website Cache & Review Workflow
-
-The tool caches detected newsletter websites for each source and marks them as **verified** or **unverified**:
-- **Verified:** Trusted and used for future runs.
-- **Unverified:** Used as a fallback, but will be replaced if a better guess or curated mapping is found.
-- **Curated mapping:** Always takes precedence and is always trusted.
-
-### How to Review and Confirm Newsletter Websites
-
-1. **After running the tool**, review the detected websites for accuracy:
-
-    ```bash
-    python review_newsletter_websites.py
-    ```
-
-    For each unverified entry, you can:
-    - `[a]ccept` to mark as verified
-    - `[e]dit` to correct the website and mark as verified
-    - `[d]elete` to remove the entry (it will be re-guessed next run)
-    - `[s]kip` to leave it unverified for now
-
-2. **Why review?**
-    - Ensures your report always links to the correct main site for each newsletter.
-    - Prevents bad guesses (e.g., tracking links, forms) from persisting in your reports.
-    - Lets you maintain high-quality, human-verified source links.
-
-3. **How to extend the curated mapping:**
-    - Edit the `curated_websites` dictionary in `report.py` to add or update known newsletters and their homepages. These are always trusted and override guesses.
-
 ## Requirements
 
 - Python 3.11 (recommended), or 3.10 (also supported)
@@ -205,7 +176,7 @@ You can modify the tool's behavior using these optional flags:
     python main.py --to-email yourname@gmail.com
     ```
 
--   `--llm-provider PROVIDER`: Choose between `claude` (Claude 3.7 Sonnet), `openai` (GPT-4.1, default), or `google` (Gemini 2.0 Flash).
+-   `--llm-provider PROVIDER`: Choose between `claude`, `openai` (default), or `google`.
     ```bash
     python main.py --llm-provider claude
     ```
@@ -233,6 +204,26 @@ You can modify the tool's behavior using these optional flags:
 
 -   `-h` / `--help`: Show all available command-line options and usage examples.
 
+## Model Presets
+
+The tool uses different models depending on whether you're using OpenRouter (default) or direct API calls:
+
+### OpenRouter Models (Default)
+When `USE_OPENROUTER=true` (default), the presets map to these OpenRouter models:
+
+- `claude` → `anthropic/claude-sonnet-4`
+- `openai` → `openai/gpt-4.1-mini` 
+- `google` → `google/gemini-2.5-flash-preview-05-20`
+
+### Direct API Models (Fallback)
+When `USE_OPENROUTER=false`, the presets map to these direct API models:
+
+- `claude` → `claude-3-7-sonnet-20250219`
+- `openai` → `gpt-4.1-2025-04-14`
+- `google` → `gemini-2.5-flash-preview`
+
+You can also use the `--model` parameter to specify any custom OpenRouter model directly, which overrides the preset mappings.
+
 ## OpenRouter Integration
 
 This project uses [OpenRouter](https://openrouter.ai) by default for all LLM API calls, providing:
@@ -251,14 +242,14 @@ To analyze request costs:
 python analyze_costs.py
 ```
 
-## Approaches
+## Approach
 
-The tool offers two distinct approaches to generating summaries:
+The tool uses a single, streamlined approach to generating summaries:
 
-### 1. Direct-to-LLM Approach (Default)
-- Sends newsletter content directly to the LLM
-- LLM identifies topics and generates summaries in a single step
-- Streamlined process with potentially more coherent topics
+### Direct-to-LLM Analysis
+- Sends newsletter content directly to the LLM in one step
+- LLM identifies the most significant topics and generates summaries simultaneously
+- Produces coherent, ranked topics with actionable insights for regular users
 
 ## Modular Architecture
 
@@ -269,7 +260,6 @@ The codebase is organized into the following modules for clarity and maintainabi
 - `llm.py` — LLM analysis
 - `report.py` — Report generation
 - `main.py` — Entry point (run this file to use your tool)
-- `summ.py` — Now just a stub, instructing users to use `main.py`
 
 ## Customization
 
@@ -278,6 +268,35 @@ For more advanced modifications:
 -   To modify the number of key topics extracted, adjust the `num_topics` argument.
 -   To change the direct-LLM prompt or model, edit the `analyze_newsletters_unified` function in `llm.py`.
 -   To customize the final report format or content, modify the `generate_report` function in `report.py`.
+
+## Newsletter Website Cache & Review Workflow
+
+The tool caches detected newsletter websites for each source and marks them as **verified** or **unverified**:
+- **Verified:** Trusted and used for future runs.
+- **Unverified:** Used as a fallback, but will be replaced if a better guess or curated mapping is found.
+- **Curated mapping:** Always takes precedence and is always trusted.
+
+### How to Review and Confirm Newsletter Websites
+
+1. **After running the tool**, review the detected websites for accuracy:
+
+    ```bash
+    python review_newsletter_websites.py
+    ```
+
+    For each unverified entry, you can:
+    - `[a]ccept` to mark as verified
+    - `[e]dit` to correct the website and mark as verified
+    - `[d]elete` to remove the entry (it will be re-guessed next run)
+    - `[s]kip` to leave it unverified for now
+
+2. **Why review?**
+    - Ensures your report always links to the correct main site for each newsletter.
+    - Prevents bad guesses (e.g., tracking links, forms) from persisting in your reports.
+    - Lets you maintain high-quality, human-verified source links.
+
+3. **How to extend the curated mapping:**
+    - Edit the `curated_websites` dictionary in `report.py` to add or update known newsletters and their homepages. These are always trusted and override guesses.
 
 ## Troubleshooting
 
