@@ -142,7 +142,7 @@ def analyze_with_openrouter(prompt, model_provider, custom_model=None):
     model_map = {
         'claude': "anthropic/claude-sonnet-4",
         'openai': "openai/gpt-4.1-mini",
-        'google': "google/gemini-2.5-flash-preview-05-20"
+        'google': "google/gemini-2.5-flash"
     }
     
     # Choose between custom model or mapped provider

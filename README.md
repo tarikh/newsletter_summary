@@ -213,7 +213,7 @@ When `USE_OPENROUTER=true` (default), the presets map to these OpenRouter models
 
 - `claude` → `anthropic/claude-sonnet-4`
 - `openai` → `openai/gpt-4.1-mini` 
-- `google` → `google/gemini-2.5-flash-preview-05-20`
+- `google` → `google/gemini-2.5-flash`
 
 ### Direct API Models (Fallback)
 When `USE_OPENROUTER=false`, the presets map to these direct API models:
