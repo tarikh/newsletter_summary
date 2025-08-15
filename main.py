@@ -110,6 +110,16 @@ def main():
         if output_dir:
             os.makedirs(output_dir, exist_ok=True)
             report_filename = os.path.join(output_dir, report_filename)
+            
+            # Add Jekyll front matter for GitHub Pages
+            jekyll_front_matter = f"""---
+layout: default
+title: DeFi Newsletter Summary - {datetime.datetime.now().strftime('%B %d, %Y')}
+---
+
+"""
+            report = jekyll_front_matter + report
+            
         with open(report_filename, 'w') as f:
             f.write(report)
         print(f"Report saved to {report_filename}")

@@ -1,3 +1,8 @@
+---
+layout: default
+title: DeFi Newsletter Summary - August 14-15, 2025
+---
+
 # AI NEWSLETTER SUMMARY
 ## Generated with gpt-4.1-2025-04-14
 
