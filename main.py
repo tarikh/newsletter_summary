@@ -38,8 +38,8 @@ def main():
                         help='LLM provider for summarization: claude (Claude 3.7 Sonnet), openai (GPT-4.1), or google (Gemini 2.0 Flash)')
     parser.add_argument('--model', type=str, default=None,
                         help='Specify a custom OpenRouter model (e.g., "google/gemini-2.5-flash-preview:thinking") overriding the provider selection')
-    parser.add_argument('--label', type=str, default='ai-newsletter',
-                        help='Gmail label to filter newsletters (default: ai-newsletter)')
+    parser.add_argument('--label', type=str, default='DeFi Updates',
+                        help='Gmail label to filter newsletters (default: DeFi Updates)')
     parser.add_argument('--no-label', action='store_true',
                         help='Do not use any Gmail label as a search criteria (overrides --label)')
     parser.add_argument('--from-email', type=str, default=None,
