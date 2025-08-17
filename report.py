@@ -65,7 +65,7 @@ def generate_report(newsletters, topics, llm_analysis, days, model_info=None):
 # AI NEWSLETTER SUMMARY
 {model_section}{date_range}
 
-## TOP AI DEVELOPMENTS THIS WEEK
+## TOP CRYPTO DEVELOPMENTS THIS WEEK
 
 {llm_analysis}
 """
