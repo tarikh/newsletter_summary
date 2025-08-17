@@ -62,10 +62,10 @@ def generate_report(newsletters, topics, llm_analysis, days, model_info=None):
         model_section = f"## Generated with {model_name}\n\n"
     
     report = f"""\
-# AI NEWSLETTER SUMMARY
+# DEFI NEWSLETTER SUMMARY
 {model_section}{date_range}
 
-## TOP CRYPTO DEVELOPMENTS THIS WEEK
+## TOP AI DEVELOPMENTS
 
 {llm_analysis}
 """
