@@ -4,7 +4,7 @@ Welcome to the automated DeFi newsletter analysis site. This page displays the l
 
 ## Latest Reports
 
-### [August 14-15, 2025 Summary](./ai_newsletter_summary_20250815_1205_from_20250814.md)
+### [Latest: August 14-16, 2025 Summary](./ai_newsletter_summary_20250816_1721_from_20250814.md)
 Latest DeFi and crypto developments covering:
 - Ethereum NFTs showing high beta performance
 - Chainlink Reserve launch
@@ -12,7 +12,11 @@ Latest DeFi and crypto developments covering:
 - Token buyback initiatives
 - AI-DeFi ecosystem integration
 
-**Generated:** August 15, 2025 | **Sources:** Metaversal by Bankless, Milk Road
+**Generated:** August 16, 2025 | **Sources:** 8 newsletters analyzed
+
+### Previous Reports
+- [August 15 Summary](./ai_newsletter_summary_20250815_1205_from_20250814.md)
+- [August 15 Summary (v1)](./ai_newsletter_summary_20250815_1140_from_20250814.md)
 
 ---
 
